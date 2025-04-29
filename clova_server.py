@@ -10,6 +10,10 @@ from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 import torch
 from dotenv import load_dotenv
 import os
+from langchain_community.document_loaders import Docx2txtLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings
+from langchain_community.vectorstores import Chroma
 
 # API 모델 정의
 class ServerStatus(str, Enum):
@@ -56,16 +60,61 @@ model = None
 processor = None
 tokenizer = None
 request_queue = Queue()
+vector_store = None
+embeddings = None
+text_splitter = None
 
 # ========== 1. 환경 설정 ==========
 load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # ========== 2. GPU 확인 ==========
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"추론 디바이스: {device}")
 if device == "cuda":
     print(f"   GPU: {torch.cuda.get_device_name(0)}\n")
+
+def load_and_process_document(file_path: str) -> None:
+    """문서를 로드하고 처리하여 벡터 스토어에 저장합니다."""
+    global vector_store
+    
+    try:
+        # 문서 로드
+        loader = Docx2txtLoader(file_path)
+        documents = loader.load()
+        
+        # 문서를 청크로 분할
+        splits = text_splitter.split_documents(documents)
+        
+        # Chroma 벡터 스토어 생성 또는 업데이트
+        if vector_store is None:
+            vector_store = Chroma.from_documents(
+                documents=splits,
+                embedding=embeddings,
+                persist_directory="./chroma_db"
+            )
+        else:
+            vector_store.add_documents(splits)
+        
+        # 변경사항 저장
+        vector_store.persist()
+        
+    except Exception as e:
+        print(f"문서 처리 중 오류 발생: {str(e)}")
+        raise
+
+def get_relevant_context(query: str, k: int = 3) -> str:
+    """쿼리에 관련된 컨텍스트를 검색합니다."""
+    if vector_store is None:
+        return ""
+    
+    try:
+        results = vector_store.similarity_search(query, k=k)
+        return "\n\n".join([doc.page_content for doc in results])
+    except Exception as e:
+        print(f"컨텍스트 검색 중 오류 발생: {str(e)}")
+        return ""
 
 def process_moderation_request():
     while True:
@@ -74,11 +123,25 @@ def process_moderation_request():
             try:
                 print(f"\n[큐 처리] 검열 요청 처리 시작: {content}")
                 
+                # RAG를 통해 관련 컨텍스트 검색
+                relevant_context = get_relevant_context(content)
+                
                 # 채팅 형식으로 입력 구성
                 chat = [
                     {"role": "system", "content": "당신은 검열 시스템입니다. 입력된 텍스트가 부적절한지 판단해야 합니다. '검열 필요: [이유]' 또는 '검열 불필요: 적절한 표현입니다' 형식으로만 답변하세요."},
-                    {"role": "user", "content": f"다음 텍스트가 부적절한지 판단해주세요: {content}"},
                 ]
+                
+                # 관련 컨텍스트가 있다면 추가
+                if relevant_context:
+                    chat.append({
+                        "role": "system",
+                        "content": f"다음은 판단에 참고할 수 있는 관련 문서입니다:\n{relevant_context}"
+                    })
+                
+                chat.append({
+                    "role": "user",
+                    "content": f"다음 텍스트가 부적절한지 판단해주세요: {content}"
+                })
                 
                 input_ids = tokenizer.apply_chat_template(chat, return_tensors="pt", tokenize=True)
                 input_ids = input_ids.to(device)
@@ -109,7 +172,7 @@ def process_moderation_request():
 
 @app.on_event("startup")
 async def startup_event():
-    global model, processor, tokenizer
+    global model, processor, tokenizer, embeddings, text_splitter
     
     try:
         print("모델 로드 중...")
@@ -132,6 +195,19 @@ async def startup_event():
             model_name,
             token=hf_token
         )
+        
+        # RAG 컴포넌트 초기화
+        embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200,
+            length_function=len
+        )
+        
+        # 기존 문서 로드
+        docx_path = "RAG_data.docx"
+        if os.path.exists(docx_path):
+            load_and_process_document(docx_path)
         
         # 백그라운드 처리 스레드 시작
         background_thread = Thread(target=process_moderation_request, daemon=True)

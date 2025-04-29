@@ -14,3 +14,5 @@ requirements.txt
 .bash_logout
 RAG_data.docx
 __pycache__
+.nv/
+chroma_db/
