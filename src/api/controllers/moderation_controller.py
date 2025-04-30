@@ -5,7 +5,7 @@ from src.api.dtos.moderation_request import ModerationRequest
 def get_router(moderation_queue):
     router = APIRouter(prefix="/api/v1")
 
-    @router.post("/moderate", status_code=status.HTTP_202_ACCEPTED)
+    @router.post("/moderation", status_code=status.HTTP_202_ACCEPTED)
     async def moderate(request: ModerationRequest):
         #  TODO: 로그 남기기
         if not request.voteContent.strip():
