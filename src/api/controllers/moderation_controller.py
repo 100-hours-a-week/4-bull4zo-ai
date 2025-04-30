@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from src.api.dtos.moderation_request import ModerationRequest
 
 def get_router(moderation_queue):
-    router = APIRouter()
+    router = APIRouter(prefix="/api/v1")
 
     @router.post("/moderate", status_code=status.HTTP_202_ACCEPTED)
     async def moderate(request: ModerationRequest):
