@@ -1,5 +1,5 @@
 from typing import Dict, List, Any, Optional
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Request
 from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 import uvicorn
@@ -14,6 +14,14 @@ from langchain_community.document_loaders import Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
+import logging
+import json
+import uuid
+from fastapi.responses import JSONResponse
+from fastapi.exception_handlers import RequestValidationError
+from fastapi.exceptions import RequestValidationError as FastAPIRequestValidationError
+from starlette.requests import Request as StarletteRequest
+from datetime import datetime, timezone
 
 # API 모델 정의
 class ServerStatus(str, Enum):
@@ -63,6 +71,31 @@ request_queue = Queue()
 vector_store = None
 embeddings = None
 text_splitter = None
+
+# ========== 로깅 설정 ==========
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler("moderation.log", encoding="utf-8"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# ========== JSON 로깅 설정 ==========
+class JsonLogFormatter(logging.Formatter):
+    def format(self, record):
+        log_record = record.msg if isinstance(record.msg, dict) else {"message": record.getMessage()}
+        return json.dumps(log_record, ensure_ascii=False)
+
+json_handler = logging.FileHandler("logs/censorship.log", encoding="utf-8")
+json_handler.setFormatter(JsonLogFormatter())
+json_logger = logging.getLogger("censorship")
+json_logger.setLevel(logging.INFO)
+json_logger.handlers = []
+json_logger.addHandler(json_handler)
+json_logger.propagate = False
 
 # ========== 1. 환경 설정 ==========
 load_dotenv()
@@ -119,33 +152,23 @@ def get_relevant_context(query: str, k: int = 3) -> str:
 def process_moderation_request():
     while True:
         if not request_queue.empty():
-            content = request_queue.get()
+            req_info = request_queue.get()
             try:
-                print(f"\n[큐 처리] 검열 요청 처리 시작: {content}")
-                
-                # RAG를 통해 관련 컨텍스트 검색
-                relevant_context = get_relevant_context(content)
-                
-                # 채팅 형식으로 입력 구성
+                relevant_context = get_relevant_context(req_info["voteContent"])
                 chat = [
                     {"role": "system", "content": "당신은 검열 시스템입니다. 입력된 텍스트가 부적절한지 판단해야 합니다. '검열 필요: [이유]' 또는 '검열 불필요: 적절한 표현입니다' 형식으로만 답변하세요."},
                 ]
-                
-                # 관련 컨텍스트가 있다면 추가
                 if relevant_context:
                     chat.append({
                         "role": "system",
                         "content": f"다음은 판단에 참고할 수 있는 관련 문서입니다:\n{relevant_context}"
                     })
-                
                 chat.append({
                     "role": "user",
-                    "content": f"다음 텍스트가 부적절한지 판단해주세요: {content}"
+                    "content": f"다음 텍스트가 부적절한지 판단해주세요: {req_info['voteContent']}"
                 })
-                
                 input_ids = tokenizer.apply_chat_template(chat, return_tensors="pt", tokenize=True)
                 input_ids = input_ids.to(device)
-                
                 output_ids = model.generate(
                     input_ids,
                     max_new_tokens=64,
@@ -154,20 +177,40 @@ def process_moderation_request():
                     temperature=0.5,
                     repetition_penalty=1.0,
                 )
-                
                 result = tokenizer.batch_decode(output_ids)[0]
-                
-                # ChatML 형식에서 실제 응답 추출
                 response_start = result.rfind("<|im_start|>assistant\n") + len("<|im_start|>assistant\n")
                 response_end = result.rfind("<|im_end|>")
                 if response_start != -1 and response_end != -1:
-                    result = result[response_start:response_end].strip()
-                
-                print(f"[큐 처리] 검열 결과: {result}\n")
-                # TODO: 여기에 백엔드 서버로 결과를 전송하는 코드 추가
-                
+                    parsed_result = result[response_start:response_end].strip()
+                else:
+                    parsed_result = ""
+                if not parsed_result:
+                    # 파싱 실패 시 원본 전체를 moderation_result로 남김
+                    log_data = {
+                        **req_info,
+                        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "status_code": 200,
+                        "moderation_result": result.strip(),
+                        "error_message": None
+                    }
+                else:
+                    log_data = {
+                        **req_info,
+                        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "status_code": 200,
+                        "moderation_result": parsed_result,
+                        "error_message": None
+                    }
+                json_logger.info(log_data)
             except Exception as e:
-                print(f"[큐 처리] 오류 발생: {str(e)}\n")
+                log_data = {
+                    **req_info,
+                    "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "status_code": 500,
+                    "moderation_result": None,
+                    "error_message": str(e)
+                }
+                json_logger.info(log_data)
         time.sleep(0.1)
 
 @app.on_event("startup")
@@ -219,25 +262,37 @@ async def startup_event():
         model = None
 
 @app.post("/api/v1/moderation", status_code=status.HTTP_202_ACCEPTED, response_model=APIResponse)
-async def check_vote_content(vote: VoteContent):
+async def check_vote_content(vote: VoteContent, request: Request):
+    request_id = str(uuid.uuid4())
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    client_ip = request.client.host if request.client else "unknown"
+    req_info = {
+        "request_id": request_id,
+        "timestamp": timestamp,
+        "endpoint": "/api/v1/moderation",
+        "client_ip": client_ip,
+        "voteContent": vote.voteContent
+    }
     if not model:
+        log_data = {**req_info, "status_code": 500, "moderation_result": None, "error_message": "Moderation system is not initialized"}
+        json_logger.info(log_data)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Moderation system is not initialized"
         )
-    
     try:
-        # 요청을 큐에 추가
-        request_queue.put(vote.voteContent)
-        print(f"[요청 접수] 새로운 검열 요청이 큐에 추가됨: {vote.voteContent}")
-        
+        # 요청을 큐에 추가 (dict로)
+        request_queue.put(req_info)
+        log_data = {**req_info, "status_code": 202, "moderation_result": "queued", "error_message": None}
+        json_logger.info(log_data)
         return APIResponse(
             status="Accepted",
             message="voteContent has been queued for processing",
             data={"queuePosition": request_queue.qsize()}
         )
-        
     except Exception as e:
+        log_data = {**req_info, "status_code": 500, "moderation_result": None, "error_message": str(e)}
+        json_logger.info(log_data)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
@@ -264,6 +319,38 @@ async def get_status():
                     ]
                 }
             ]
+        }
+    )
+
+# Pydantic validation error(400) 핸들러 추가
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: StarletteRequest, exc: FastAPIRequestValidationError):
+    request_id = str(uuid.uuid4())
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    client_ip = request.client.host if request.client else "unknown"
+    input_text = None
+    try:
+        body = await request.json()
+        input_text = body.get("voteContent")
+    except Exception:
+        pass
+    log_data = {
+        "request_id": request_id,
+        "timestamp": timestamp,
+        "endpoint": "/api/v1/moderation",
+        "client_ip": client_ip,
+        "voteContent": input_text,
+        "status_code": 400,
+        "moderation_result": None,
+        "error_message": "voteContent must not be null, empty, or whitespace only."
+    }
+    json_logger.info(log_data)
+    return JSONResponse(
+        status_code=400,
+        content={
+            "status": "Bad Request",
+            "message": "voteContent must not be null, empty, or whitespace only.",
+            "data": None
         }
     )
 
