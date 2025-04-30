@@ -4,12 +4,16 @@ import logging
 from multiprocessing import Queue
 from multiprocessing.synchronize import Event
 from dotenv import load_dotenv
+from fastapi import requests
 from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 import torch
 from langchain_community.document_loaders import Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
+from src.api.dtos.moderation_request import ModerationRequest
+from src.api.dtos.moderation_result_request import ModerationResultRequest
+import requests
 
 vector_store = None
 embeddings = None
@@ -48,7 +52,7 @@ def load_and_process_document(file_path: str) -> None:
         vector_store.persist()
         
     except Exception as e:
-        print(f"문서 처리 중 오류 발생: {str(e)}")
+        logging.info(f"문서 처리 중 오류 발생: {str(e)}")
         raise
 
 def get_relevant_context(query: str, k: int = 3) -> str:
@@ -60,7 +64,7 @@ def get_relevant_context(query: str, k: int = 3) -> str:
         results = vector_store.similarity_search(query, k=k)
         return "\n\n".join([doc.page_content for doc in results])
     except Exception as e:
-        print(f"컨텍스트 검색 중 오류 발생: {str(e)}")
+        logging.info(f"컨텍스트 검색 중 오류 발생: {str(e)}")
         return ""
 
 def run_model_process(stop_event: Event, moderation_queue: Queue):
@@ -111,10 +115,11 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
 
     while not stop_event.is_set():
         if not moderation_queue.empty():
-            voteContent = moderation_queue.get()
+            moderation_request: ModerationRequest = moderation_queue.get()
+            voteContent = moderation_request.voteContent
 
             try:
-                print(f"\n[큐 처리] 검열 요청 처리 시작: {voteContent}")
+                logging.info(f"\n[큐 처리] 검열 요청 처리 시작: {voteContent}")
                 
                 # RAG를 통해 관련 컨텍스트 검색
                 relevant_context = get_relevant_context(voteContent)
@@ -156,11 +161,58 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 if response_start != -1 and response_end != -1:
                     result = result[response_start:response_end].strip()
                 
-                print(f"[큐 처리] 검열 결과: {result}\n")
-                # TODO: 여기에 백엔드 서버로 결과를 전송하는 코드 추가
+                logging.info(f"[큐 처리] 검열 결과: {result}\n")
+
+                result = ""
+                reason = ""
+                if "검열 불필요" in result:
+                    result = "APPROVED"
+                else:
+                    result = "REJECTED"
+                    # TODO: result 내용에서 사유만 추출하여 reason에 전달 
+                    reason = result
+                
+                # TODO: AI Server Version 규격 정의 및 설정 필요
+                version = ""
+
+                headers = {
+                    "Content-Type": "application/json"
+                }
+                
+                # TODO: 형식 관련 논의 필요 (w/ BE)
+                moderation_result_request = ModerationResultRequest(
+                    moderation_request.voteId,
+                    result,
+                    reason,
+                    version
+                )
+
+                # TODO: server IP(또는 Domain 필요). 변경해야 함
+                url = "http://server_domain:port/api/v1/ai/votes/moderation/callback"
+
+                try:
+                    response = requests.post(url, json=moderation_result_request, headers=headers)
+
+                    # TODO: 응답 코드마다 어떻게 처리할지 고려 필요
+                    if response.status_code == 201:
+                        result = response.json()
+                        logging.info("[201 Created] 저장 성공:", result)
+                    elif response.status_code == 400:
+                        logging.error("[400 Bad Request] 요청이 잘못되었습니다:", response.text)
+                    elif response.status_code == 404:
+                        logging.error("[404 Not Found] 경로를 찾을 수 없습니다:", response.text)
+                    elif response.status_code == 500:
+                        logging.error("[500 Internal Server Error] 서버 오류:", response.text)
+                    else:
+                        logging.error(f"[{response.status_code}] 예상치 못한 응답:", response.text)
+
+                except requests.exceptions.RequestException as e:
+                    # TODO: 요청 실패 시, 처리 방안 필요
+                    logging.error("⚠️ 요청 중 예외 발생:", e)
                 
             except Exception as e:
-                print(f"[큐 처리] 오류 발생: {str(e)}\n")
+                # TODO: Retry, 등 검열 실패 시 추가 동작에 관해 처리 필요
+                logging.info(f"[큐 처리] 오류 발생: {str(e)}\n")
         
         # CPU 100% 방지
         time.sleep(0.01)

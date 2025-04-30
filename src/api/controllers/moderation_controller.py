@@ -19,7 +19,7 @@ def get_router(moderation_queue):
             )
 
         try:
-            moderation_queue.put(request.voteContent)
+            moderation_queue.put(request)
             #  TODO: 로그 남기기
             return {
                 "status": "Accepted",
