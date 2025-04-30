@@ -13,9 +13,36 @@ LLM을 기반으로 투표 내용을 검열하거나, 흥미로운 투표 생성
 
 ## Development Environment
 
-- Programming Language : Python >= 3.9.22
-- Dependency Management : poetry
+- Programming Language : Python v3.9.22
 
 ## LLM (Large Language Model)
 
 - HyperCLOVA X SEED 3B
+
+## Project Directory Structure
+```
+4-bull4zo-ai
+- app.py
+- src
+    - ai
+        - ai_process.py
+    - api
+        - api_process.py
+        - controllers
+            - moderation_controller.py
+            - status_controller.py
+        - dtos
+            - moderation_request.py
+```
+
+## How to run
+run command in terminal followings:
+```
+> python app.py
+```
+
+### running process
+1. start app.py
+2. run `ai_process.py` and `api_process.py` by multiprocessing
+3. `ai_process.py` runs model loading -> processing queue
+4. `api_process.py` run FastAPI Server
