@@ -8,7 +8,7 @@ from src.api.dtos.moderation_request import ModerationRequest
 import requests
 
 def get_router(moderation_queue):
-    router = APIRouter(prefix="/api/v1")
+    router = APIRouter(prefix="/api/v1", tags=["Moderation"])
 
     @router.post("/moderation", status_code=status.HTTP_202_ACCEPTED)
     async def moderate(request: ModerationRequest):
