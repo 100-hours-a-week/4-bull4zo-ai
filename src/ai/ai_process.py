@@ -16,6 +16,16 @@ from src.api.dtos.moderation_result_request import ModerationResultRequest
 import requests
 import logging.handlers
 
+# 한글 카테고리를 영어 ENUM으로 맵핑
+CATEGORY_MAPPING = {
+    "욕설/비방": "OFFENSIVE_LANGUAGE",
+    "정치": "POLITICAL_CONTENT",
+    "음란성/선정성": "SEXUAL_CONTENT",
+    "스팸/광고": "SPAM_ADVERTISEMENT",
+    "사칭/사기/개인정보 노출": "IMPERSONATION_OR_LEAK", 
+    "기타": "OTHER"
+}
+
 vector_store = None
 embeddings = None
 text_splitter = None
@@ -172,7 +182,7 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 
                 # 채팅 형식으로 입력 구성
                 chat = [
-                    {"role": "system", "content": "당신은 검열 시스템입니다. 입력된 텍스트가 부적절한지 간단히 판단해야 합니다. 긴 설명은 하지 말고, '검열 필요: [이유]' 또는 '검열 불필요: 적절한 표현입니다' 형식으로만 답변하세요."},
+                    {"role": "system", "content": "당신은 검열 시스템입니다. 입력된 텍스트가 부적절한지 판단하고 분류해야 합니다. 반드시 다음 형식으로만 답변하세요: 부적절한 내용이면 '검열 필요: [카테고리] [이유]', 적절한 내용이면 '검열 불필요: 적절한 표현입니다'. 카테고리는 다음 중 하나여야 합니다: '욕설/비방', '정치', '음란성/선정성', '스팸/광고', '사칭/사기/개인정보 노출', '기타'. 욕설의 경우 초성만 사용하거나 일부분만 사용한 경우('ㅅㅂ', '씨1발', '개ㅅㅂ' 등)도 욕설/비방으로 분류해야 합니다."},
                 ]
                 
                 # 관련 컨텍스트가 있다면 추가 (로그에는 출력하지 않음)
@@ -184,7 +194,7 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 
                 chat.append({
                     "role": "user",
-                    "content": f"다음 텍스트가 부적절한지 판단해주세요: {voteContent}"
+                    "content": f"다음 텍스트가 부적절한지 판단하고 카테고리를 분류해주세요: {voteContent}"
                 })
                 
                 input_ids = tokenizer.apply_chat_template(chat, return_tensors="pt", tokenize=True)
@@ -242,6 +252,7 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 
                 final_result = ""
                 final_reason = ""
+                final_reason_detail = ""
                 
                 if result:  # 결과가 비어있지 않은 경우에만 처리
                     if "검열 불필요" in result:
@@ -249,14 +260,49 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                         final_reason = "적절한 표현입니다"
                     else:
                         final_result = "REJECTED"
-                        # 검열 필요: [이유] 형식에서 이유 부분만 추출
+                        
+                        # 카테고리 식별 (한국어)
+                        kr_categories = list(CATEGORY_MAPPING.keys())
+                        found_category_kr = "기타"  # 기본값 (한국어)
+                        reason_detail = ""
+                        
+                        # "검열 필요: [카테고리] [이유]" 형식 처리
                         if ": " in result:
-                            final_reason = result.split(": ", 1)[1]
+                            content_part = result.split(": ", 1)[1]
+                            
+                            for category in kr_categories:
+                                if category in content_part:
+                                    found_category_kr = category
+                                    reason_detail = content_part.replace(category, "", 1).strip()
+                                    break
+                            
+                            # 이유가 없을 경우 기본 메시지 설정
+                            if not reason_detail:
+                                reason_detail = "부적절한 내용이 감지되었습니다."
                         else:
-                            final_reason = result
+                            # "검열 필요:" 없이 카테고리만 바로 있는 경우 (예: "욕설/비방")
+                            for category in kr_categories:
+                                if category in result:
+                                    found_category_kr = category
+                                    break
+                            
+                            # 카테고리 외의 내용은 상세 이유로
+                            for category in kr_categories:
+                                result = result.replace(category, "", 1)
+                            
+                            reason_detail = result.strip()
+                            if not reason_detail:
+                                reason_detail = "부적절한 내용이 감지되었습니다."
+                        
+                        # 한국어 카테고리를 영어 ENUM 코드로 변환
+                        found_category_en = CATEGORY_MAPPING.get(found_category_kr, "OTHER")
+                        
+                        final_reason = found_category_en  # 영어 ENUM 코드 사용
+                        final_reason_detail = reason_detail
                 else:
                     final_result = "ERROR"
-                    final_reason = "검열 결과를 얻을 수 없습니다"
+                    final_reason = "OTHER"
+                    final_reason_detail = "검열 결과를 얻을 수 없습니다"
                 
                 # TODO: AI Server Version 규격 정의 및 설정 필요
                 version = "1.0.0"  # 임시 버전 설정
@@ -269,19 +315,11 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 moderation_result_request = ModerationResultRequest(
                     voteId=moderation_request.voteId if moderation_request.voteId is not None else 0,
                     result=final_result,
-                    reason=final_reason, # TODO: 검열 카테고리 필요
-                    reasonDetail=final_reason,
+                    reason=final_reason,
+                    reasonDetail=final_reason_detail,
                     version=version
                 )
 
-                # TODO: 로깅 필요
-                # 콜백 전송 대신 결과 출력
-                print("\n=== 검열 결과 ===")
-                print(f"Vote ID: {moderation_result_request.voteId}")
-                print(f"Result: {moderation_result_request.result}")
-                print(f"Reason: {moderation_result_request.reason}")
-                print(f"Version: {moderation_result_request.version}")
-                print("================\n")
 
                 try:
                     response = requests.post(callback_url, json=moderation_result_request.dict(), headers=headers)
