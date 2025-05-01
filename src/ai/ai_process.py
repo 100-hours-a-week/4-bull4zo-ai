@@ -23,7 +23,11 @@ text_splitter = None
 load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
 openai_api_key = os.getenv("OPENAI_API_KEY")
-# callback_url = os.getenv("CALLBACK_URL", "http://localhost:8080/api/v1/ai/votes/moderation/callback")
+environment = os.getenv("ENVIRONMENT").lower()
+be_server_ip = "127.0.0.1" if environment == "dev" else os.getenv("BE_SERVER_IP")
+be_server_port = os.getenv("BE_SERVER_PORT")
+
+callback_url = f"http://{be_server_ip}:{be_server_port}/api/v1/ai/votes/moderation/callback"
 
 if not hf_token:
     raise ValueError("HF_TOKEN is not set. Please check your .env file.")
@@ -265,10 +269,12 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 moderation_result_request = ModerationResultRequest(
                     voteId=moderation_request.voteId if moderation_request.voteId is not None else 0,
                     result=final_result,
-                    reason=final_reason,
+                    reason=final_reason, # TODO: 검열 카테고리 필요
+                    reasonDetail=final_reason,
                     version=version
                 )
-                # TODO: server IP(또는 Domain 필요). 변경해야 함
+
+                # TODO: 로깅 필요
                 # 콜백 전송 대신 결과 출력
                 print("\n=== 검열 결과 ===")
                 print(f"Vote ID: {moderation_result_request.voteId}")
@@ -277,23 +283,21 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 print(f"Version: {moderation_result_request.version}")
                 print("================\n")
 
-                # TODO: 콜백 URL이 준비되면 아래 코드의 주석을 해제
-                # url = callback_url
-                # try:
-                #     response = requests.post(url, json=moderation_result_request.dict(), headers=headers)
-                #     if response.status_code == 201:
-                #         result = response.json()
-                #         logging.info("[201 Created] 저장 성공:", result)
-                #     elif response.status_code == 400:
-                #         logging.error("[400 Bad Request] 요청이 잘못되었습니다:", response.text)
-                #     elif response.status_code == 404:
-                #         logging.error("[404 Not Found] 경로를 찾을 수 없습니다:", response.text)
-                #     elif response.status_code == 500:
-                #         logging.error("[500 Internal Server Error] 서버 오류:", response.text)
-                #     else:
-                #         logging.error(f"[{response.status_code}] 예상치 못한 응답:", response.text)
-                # except requests.exceptions.RequestException as e:
-                #     logging.error("⚠️ 요청 중 예외 발생:", e)
+                try:
+                    response = requests.post(callback_url, json=moderation_result_request.dict(), headers=headers)
+                    if response.status_code == 201:
+                        result = response.json()
+                        logging.info("[201 Created] 저장 성공:", result)
+                    elif response.status_code == 400:
+                        logging.error("[400 Bad Request] 요청이 잘못되었습니다:", response.text)
+                    elif response.status_code == 404:
+                        logging.error("[404 Not Found] 경로를 찾을 수 없습니다:", response.text)
+                    elif response.status_code == 500:
+                        logging.error("[500 Internal Server Error] 서버 오류:", response.text)
+                    else:
+                        logging.error(f"[{response.status_code}] 예상치 못한 응답:", response.text)
+                except requests.exceptions.RequestException as e:
+                    logging.error("⚠️ 요청 중 예외 발생:", e)
                 
             except Exception as e:
                 # TODO: Retry, 등 검열 실패 시 추가 동작에 관해 처리 필요
