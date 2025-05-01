@@ -23,7 +23,8 @@ text_splitter = None
 load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
 openai_api_key = os.getenv("OPENAI_API_KEY")
-be_server_ip = os.getenv("BE_SERVER_IP")
+environment = os.getenv("ENVIRONMENT").lower()
+be_server_ip = "127.0.0.1" if environment == "dev" else os.getenv("BE_SERVER_IP")
 be_server_port = os.getenv("BE_SERVER_PORT")
 
 callback_url = f"http://{be_server_ip}:{be_server_port}/api/v1/ai/votes/moderation/callback"
