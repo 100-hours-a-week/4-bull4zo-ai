@@ -1,10 +1,8 @@
 import os
 import time
-import logging
 from multiprocessing import Queue
 from multiprocessing.synchronize import Event
 from dotenv import load_dotenv
-from fastapi import requests
 from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 import torch
 from langchain_community.document_loaders import Docx2txtLoader
@@ -14,10 +12,9 @@ from langchain_community.vectorstores import Chroma
 from src.api.dtos.moderation_request import ModerationRequest
 from src.api.dtos.moderation_result_request import ModerationResultRequest
 import requests
-import logging.handlers
-import csv
-import datetime
 import json
+import datetime
+from src.common.logger_config import init_process_logging, shutdown_logging
 
 # 한글 카테고리를 영어 ENUM으로 맵핑
 CATEGORY_MAPPING = {
@@ -29,106 +26,8 @@ CATEGORY_MAPPING = {
     "기타": "OTHER"
 }
 
-# 로그 디렉토리 생성
-def ensure_log_dirs():
-    """로그 디렉토리가 존재하는지 확인하고 없으면 생성합니다."""
-    dirs = [
-        "logs/ai",
-        "logs/api"
-    ]
-    for dir_path in dirs:
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-
-# 로그 디렉토리 생성
-ensure_log_dirs()
-
-# 현재 날짜 기반 파일명
-today = datetime.datetime.now().strftime("%Y-%m-%d")
-csv_log_file = f"logs/ai/{today}.csv"
-
-# CSV 로거 설정을 위한 커스텀 핸들러
-class CSVFileHandler(logging.FileHandler):
-    def __init__(self, filename, mode='a', encoding=None, delay=False):
-        logging.FileHandler.__init__(self, filename, mode, encoding, delay)
-        self.header_written = os.path.exists(filename) and os.path.getsize(filename) > 0
-
-    def emit(self, record):
-        if self.stream is None:
-            self.stream = self._open()
-        
-        # CSV 헤더가 필요한 경우
-        if not self.header_written:
-            writer = csv.writer(self.stream)
-            writer.writerow(['timestamp', 'level', 'message'])
-            self.header_written = True
-        
-        # CSV 행 추가
-        if record.levelno >= self.level:
-            writer = csv.writer(self.stream)
-            timestamp = datetime.datetime.fromtimestamp(record.created).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-            writer.writerow([timestamp, record.levelname, record.getMessage()])
-            self.flush()
-
-# 기본 로거 설정
-logger = logging.getLogger('ai')
-logger.setLevel(logging.INFO)
-logger.propagate = False  # 부모 로거로 전파 방지
-
-# 1. CSV 파일 핸들러 (날짜별 서비스 흐름 로깅)
-csv_handler = CSVFileHandler(csv_log_file)
-csv_formatter = logging.Formatter('%(asctime)s,%(levelname)s,%(message)s', '%Y-%m-%d %H:%M:%S')
-csv_handler.setLevel(logging.INFO)
-csv_handler.setFormatter(csv_formatter)
-logger.addHandler(csv_handler)
-
-# 2. 검열 세부 로그 (모델 개선용 누적 데이터)
-moderation_logger = logging.getLogger('ai.moderation')
-moderation_logger.setLevel(logging.INFO)
-moderation_logger.propagate = False
-
-moderation_handler = logging.FileHandler('logs/ai/moderation.log')
-moderation_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
-moderation_handler.setFormatter(moderation_formatter)
-moderation_logger.addHandler(moderation_handler)
-
-# 3. 에러 로그 (장애 추적)
-error_logger = logging.getLogger('ai.error')
-error_logger.setLevel(logging.ERROR)
-error_logger.propagate = False
-
-error_handler = logging.FileHandler('logs/ai/error.log')
-error_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
-error_handler.setFormatter(error_formatter)
-error_logger.addHandler(error_handler)
-
-# 콘솔 출력 핸들러 (디버깅용)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-console_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
-console_handler.setFormatter(console_formatter)
-logger.addHandler(console_handler)
-
-# JSON 로그 포맷터 (모델 개선용)
-class JsonFormatter(logging.Formatter):
-    def format(self, record):
-        if isinstance(record.msg, dict):
-            return json.dumps(record.msg, ensure_ascii=False)
-        return json.dumps({
-            'timestamp': datetime.datetime.fromtimestamp(record.created).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3],
-            'level': record.levelname,
-            'message': record.getMessage()
-        }, ensure_ascii=False)
-
-# 한글 카테고리를 영어 ENUM으로 맵핑
-CATEGORY_MAPPING = {
-    "욕설/비방": "OFFENSIVE_LANGUAGE",
-    "정치": "POLITICAL_CONTENT",
-    "음란성/선정성": "SEXUAL_CONTENT",
-    "스팸/광고": "SPAM_ADVERTISEMENT",
-    "사칭/사기/개인정보 노출": "IMPERSONATION_OR_LEAK", 
-    "기타": "OTHER"
-}
+# 로거 초기화
+logger = init_process_logging("ai")
 
 vector_store = None
 embeddings = None
@@ -144,7 +43,8 @@ be_server_port = os.getenv("BE_SERVER_PORT")
 callback_url = f"http://{be_server_ip}:{be_server_port}/api/v1/ai/votes/moderation/callback"
 
 if not hf_token:
-    error_logger.error("HF_TOKEN is not set. Please check your .env file.")
+    logger.error("HF_TOKEN is not set. Please check your .env file.", 
+                extra={"section": "system", "request_id": "init"})
     raise ValueError("HF_TOKEN is not set. Please check your .env file.")
 
 def load_and_process_document(file_path: str) -> None:
@@ -154,7 +54,8 @@ def load_and_process_document(file_path: str) -> None:
     try:
         if text_splitter is None:
             error_msg = "text_splitter가 초기화되지 않았습니다. RAG 컴포넌트가 먼저 초기화되어야 합니다."
-            error_logger.error(error_msg)
+            logger.error(error_msg, 
+                        extra={"section": "rag", "request_id": "init"})
             raise ValueError(error_msg)
             
         # 문서 로드
@@ -176,11 +77,13 @@ def load_and_process_document(file_path: str) -> None:
         
         # 변경사항 저장
         vector_store.persist()
-        logger.info(f"문서 '{file_path}' 처리 완료")
+        logger.info(f"문서 '{file_path}' 처리 완료", 
+                   extra={"section": "rag", "request_id": "init"})
         
     except Exception as e:
         error_msg = f"문서 처리 중 오류 발생: {str(e)}"
-        error_logger.error(error_msg, exc_info=True)
+        logger.error(error_msg, exc_info=True,
+                    extra={"section": "rag", "request_id": "init"})
         raise
 
 def get_relevant_context(query: str, k: int = 3, similarity_threshold: float = 0.7) -> str:
@@ -200,25 +103,31 @@ def get_relevant_context(query: str, k: int = 3, similarity_threshold: float = 0
                 relevant_docs.append(doc.page_content)
         
         if relevant_docs:
-            logger.info("[RAG] 관련 문서를 찾았습니다")
+            logger.info("[RAG] 관련 문서를 찾았습니다", 
+                       extra={"section": "rag"})
         else:
-            logger.info("[RAG] 관련 문서가 없습니다")
+            logger.info("[RAG] 관련 문서가 없습니다", 
+                       extra={"section": "rag"})
             
         return "\n\n".join(relevant_docs)
     except Exception as e:
         error_msg = f"[RAG] 오류 발생: {str(e)}"
-        error_logger.error(error_msg, exc_info=True)
+        logger.error(error_msg, exc_info=True,
+                    extra={"section": "rag"})
         return ""
 
 def run_model_process(stop_event: Event, moderation_queue: Queue):
     # Device 설정
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    logger.info(f"추론 디바이스: {device}")
+    logger.info(f"추론 디바이스: {device}", 
+               extra={"section": "system", "request_id": "init"})
     if device == "cuda":
-        logger.info(f"GPU: {torch.cuda.get_device_name(0)}")
+        logger.info(f"GPU: {torch.cuda.get_device_name(0)}", 
+                   extra={"section": "system", "request_id": "init"})
 
     # LLM 로딩
-    logger.info("Loading model...")
+    logger.info("Loading model...", 
+               extra={"section": "system", "request_id": "init"})
 
     model_name = "naver-hyperclovax/HyperCLOVAX-SEED-Vision-Instruct-3B"
 
@@ -241,7 +150,8 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
         )
     except Exception as e:
         error_msg = f"모델 로딩 중 오류 발생: {str(e)}"
-        error_logger.error(error_msg, exc_info=True)
+        logger.error(error_msg, exc_info=True, 
+                    extra={"section": "system", "request_id": "init"})
         raise
 
     # RAG 컴포넌트 초기화
@@ -259,17 +169,25 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
     if os.path.exists(docx_path):
         load_and_process_document(docx_path)
     
-    logger.info("Model loaded successfully. Waiting for moderation tasks...")
+    logger.info("Model loaded successfully. Waiting for moderation tasks...", 
+               extra={"section": "system", "request_id": "init"})
 
-    logger.info("System Started")
+    logger.info("System Started", 
+               extra={"section": "system", "request_id": "init"})
 
     while not stop_event.is_set():
         if not moderation_queue.empty():
             moderation_request: ModerationRequest = moderation_queue.get()
             voteContent = moderation_request.voteContent
+            request_id = str(moderation_request.voteId)
 
             try:
-                logger.info(f"검열 요청 처리 시작: {voteContent}")
+                logger.info(f"검열 요청 처리 시작", 
+                           extra={
+                               "section": "moderation", 
+                               "request_id": request_id,
+                               "content": voteContent
+                            })
                 
                 # RAG를 통해 관련 컨텍스트 검색
                 relevant_context = get_relevant_context(voteContent)
@@ -308,7 +226,8 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 )
                 
                 inference_time = time.time() - start_time
-                logger.info(f"추론 시간: {inference_time:.2f}초")
+                logger.info(f"추론 시간: {inference_time:.2f}초", 
+                           extra={"section": "moderation", "request_id": request_id})
                 
                 result = tokenizer.batch_decode(output_ids)[0]
                 
@@ -341,23 +260,22 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                     else:
                         result = result.strip()
                 except Exception as e:
-                    error_logger.error(f"응답 파싱 중 오류: {str(e)}", exc_info=True)
+                    logger.error(f"응답 파싱 중 오류: {str(e)}", exc_info=True,
+                                extra={"section": "moderation", "request_id": request_id})
                     result = result.strip()
                 
                 if not result:
-                    error_logger.warning("모델 응답이 비어있습니다.")
+                    logger.warning("모델 응답이 비어있습니다.",
+                                 extra={"section": "moderation", "request_id": request_id})
                 
-                # 검열 출력을 moderation.log에 저장
-                moderation_log_data = {
-                    "vote_id": moderation_request.voteId,
-                    "content": voteContent,
-                    "model_response": result,
-                    "inference_time": f"{inference_time:.2f}s"
-                }
-                moderation_logger.info(json.dumps(moderation_log_data, ensure_ascii=False))
-                
-                # 동일한 정보를 CSV 로그에도 기록 (요약 형태로)
-                logger.info(f"모델 응답: '{result}'")
+                # 모델 응답 로깅
+                logger.info(f"모델 응답: '{result}'", 
+                           extra={
+                               "section": "moderation",
+                               "request_id": request_id,
+                               "model_version": "v1.0.0",
+                               "inference_time": f"{inference_time:.2f}s"
+                           })
                 
                 # 결과 처리
                 final_result = ""
@@ -368,6 +286,8 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                     if "검열 불필요" in result:
                         final_result = "APPROVED"
                         final_reason = "적절한 표현입니다"
+                        pred_label = "APPROVED"
+                        pred_score = "1.0"
                     else:
                         final_result = "REJECTED"
                         
@@ -409,13 +329,16 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                         
                         final_reason = found_category_en  # 영어 ENUM 코드 사용
                         final_reason_detail = reason_detail
+                        pred_label = found_category_en
+                        pred_score = "0.9"  # 예시 점수
                 else:
                     final_result = "ERROR"
                     final_reason = "OTHER"
                     final_reason_detail = "검열 결과를 얻을 수 없습니다"
-
-                    error_logger.error("모델 응답이 없어 검열할 수 없습니다.")
-
+                    pred_label = "ERROR"
+                    pred_score = "0.0"
+                    logger.error("모델 응답이 없어 검열할 수 없습니다.",
+                                extra={"section": "moderation", "request_id": request_id})
                 
                 version = "1.0.0"  # 버전 정보
 
@@ -430,38 +353,60 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                     reasonDetail=final_reason_detail,
                     version=version
                 )
-
                 
-                # CSV 로그에 검열 결과 요약 기록
-                logger.info(f"검열 결과: ID={moderation_request.voteId}, 결과={final_result}, 카테고리={final_reason}, 이유='{final_reason_detail}'")
+                # 검열 결과 로깅
+                logger.info(f"검열 결과: {final_result}, 카테고리={final_reason}, 이유='{final_reason_detail}'",
+                           extra={
+                               "section": "server", 
+                               "request_id": request_id,
+                               "pred_label": pred_label,
+                               "pred_score": pred_score,
+                               "model_version": "v1.0.0"
+                           })
 
-
+                # 백엔드 서버로 검열 결과 전송
                 try:
+                    # voteId를 문자열로 변환
+                    request_id = str(moderation_request.voteId)
+                    
+                    logger.info(f"검열 결과 전송 시작", 
+                               extra={"section": "server", "request_id": request_id})
+                    
+                    # 실제 콜백 요청 보내기
                     response = requests.post(callback_url, json=moderation_result_request.dict(), headers=headers)
+                    
+                    # 응답 결과 로깅
                     if response.status_code == 201:
-                        result = response.json()
-                        logger.info(f"검열 결과 전송 성공: HTTP {response.status_code}")
+                        logger.info(f"검열 결과 전송 성공: HTTP {response.status_code}",
+                                   extra={"section": "server", "request_id": request_id})
+                        
                     elif response.status_code == 400:
-                        error_msg = f"검열 결과 전송 실패 [400]: {response.text}"
-                        error_logger.error(error_msg)
+                        logger.error(f"검열 결과 전송 실패: HTTP {response.status_code}",
+                                    extra={"section": "server", "request_id": request_id})
                     elif response.status_code == 404:
-                        error_msg = f"검열 결과 전송 실패 [404]: {response.text}"
-                        error_logger.error(error_msg)
+                        logger.error(f"검열 결과 전송 실패: HTTP {response.status_code}",
+                                    extra={"section": "server", "request_id": request_id})
                     elif response.status_code == 500:
-                        error_msg = f"검열 결과 전송 실패 [500]: {response.text}"
-                        error_logger.error(error_msg)
+                        logger.error(f"검열 결과 전송 실패: HTTP {response.status_code}",
+                                    extra={"section": "server", "request_id": request_id})
                     else:
-                        error_msg = f"검열 결과 전송 실패 [{response.status_code}]: {response.text}"
-                        error_logger.error(error_msg)
+                        logger.error(f"검열 결과 전송 실패: HTTP {response.status_code}",
+                                    extra={"section": "server", "request_id": request_id})
                 except requests.exceptions.RequestException as e:
                     error_msg = f"검열 결과 전송 중 네트워크 오류: {str(e)}"
-                    error_logger.error(error_msg, exc_info=True)
+                    logger.error(error_msg, exc_info=True,
+                                extra={"section": "server", "request_id": request_id})
                 
             except Exception as e:
                 error_msg = f"검열 처리 중 오류 발생: {str(e)}"
-                error_logger.error(error_msg, exc_info=True)
+                logger.error(error_msg, exc_info=True,
+                            extra={"section": "moderation", "request_id": request_id})
         
         # CPU 100% 방지
         time.sleep(0.01)
     
-    logger.info("System Finished")
+    logger.info("System Finished",
+               extra={"section": "system", "request_id": "shutdown"})
+    
+    # 로깅 시스템 종료
+    shutdown_logging("ai")
