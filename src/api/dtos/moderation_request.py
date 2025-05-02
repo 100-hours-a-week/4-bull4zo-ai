@@ -2,4 +2,4 @@ from pydantic import BaseModel
 
 class ModerationRequest(BaseModel):
     voteId: int
-    voteContent: str
+    content: str
