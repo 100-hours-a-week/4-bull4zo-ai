@@ -120,6 +120,16 @@ class JsonFormatter(logging.Formatter):
             'message': record.getMessage()
         }, ensure_ascii=False)
 
+# 한글 카테고리를 영어 ENUM으로 맵핑
+CATEGORY_MAPPING = {
+    "욕설/비방": "OFFENSIVE_LANGUAGE",
+    "정치": "POLITICAL_CONTENT",
+    "음란성/선정성": "SEXUAL_CONTENT",
+    "스팸/광고": "SPAM_ADVERTISEMENT",
+    "사칭/사기/개인정보 노출": "IMPERSONATION_OR_LEAK", 
+    "기타": "OTHER"
+}
+
 vector_store = None
 embeddings = None
 text_splitter = None
@@ -403,7 +413,9 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                     final_result = "ERROR"
                     final_reason = "OTHER"
                     final_reason_detail = "검열 결과를 얻을 수 없습니다"
+
                     error_logger.error("모델 응답이 없어 검열할 수 없습니다.")
+
                 
                 version = "1.0.0"  # 버전 정보
 
@@ -418,9 +430,11 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                     reasonDetail=final_reason_detail,
                     version=version
                 )
+
                 
                 # CSV 로그에 검열 결과 요약 기록
                 logger.info(f"검열 결과: ID={moderation_request.voteId}, 결과={final_result}, 카테고리={final_reason}, 이유='{final_reason_detail}'")
+
 
                 try:
                     response = requests.post(callback_url, json=moderation_result_request.dict(), headers=headers)
