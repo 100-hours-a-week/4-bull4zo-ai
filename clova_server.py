@@ -30,13 +30,13 @@ class ServerStatus(str, Enum):
     ERROR = "Error"
 
 class VoteContent(BaseModel):
-    voteContent: str = Field(..., description="검열할 투표 내용")
+    content: str = Field(..., description="검열할 투표 내용")
     
-    @field_validator('voteContent')
+    @field_validator('content')
     @classmethod
     def validate_vote_content(cls, v: str) -> str:
         if not v or not v.strip():
-            raise ValueError("voteContent must not be null, empty, or whitespace only.")
+            raise ValueError("content must not be null, empty, or whitespace only.")
         return v.strip()
 
 class APIResponse(BaseModel):
@@ -271,7 +271,7 @@ async def check_vote_content(vote: VoteContent, request: Request):
         "timestamp": timestamp,
         "endpoint": "/api/v1/moderation",
         "client_ip": client_ip,
-        "voteContent": vote.voteContent
+        "voteContent": vote.content
     }
     if not model:
         log_data = {**req_info, "status_code": 500, "moderation_result": None, "error_message": "Moderation system is not initialized"}

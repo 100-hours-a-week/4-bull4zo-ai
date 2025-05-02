@@ -178,7 +178,7 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
     while not stop_event.is_set():
         if not moderation_queue.empty():
             moderation_request: ModerationRequest = moderation_queue.get()
-            voteContent = moderation_request.voteContent
+            content = moderation_request.content
             request_id = str(moderation_request.voteId)
 
             try:
@@ -186,11 +186,11 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                            extra={
                                "section": "moderation", 
                                "request_id": request_id,
-                               "content": voteContent
+                               "content": content
                             })
                 
                 # RAG를 통해 관련 컨텍스트 검색
-                relevant_context = get_relevant_context(voteContent)
+                relevant_context = get_relevant_context(content)
                 
                 # 채팅 형식으로 입력 구성
                 chat = [
@@ -206,7 +206,7 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 
                 chat.append({
                     "role": "user",
-                    "content": f"다음 텍스트가 부적절한지 판단하고 카테고리를 분류해주세요: {voteContent}"
+                    "content": f"다음 텍스트가 부적절한지 판단하고 카테고리를 분류해주세요: {content}"
                 })
                 
                 start_time = time.time()

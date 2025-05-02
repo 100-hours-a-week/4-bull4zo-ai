@@ -22,11 +22,11 @@ def get_router(moderation_queue, logger=None):
                    extra={
                        "section": "server", 
                        "request_id": request_id,
-                       "content": request.voteContent
+                       "content": request.content
                    })
         
-        if not request.voteContent.strip():
-            error_message = "voteContent must not be null, empty, or whitespace only."
+        if not request.content.strip():
+            error_message = "content must not be null, empty, or whitespace only."
             logger.error(f"잘못된 요청: {error_message}", 
                         extra={"section": "server", "request_id": request_id})
             return JSONResponse(
@@ -44,7 +44,7 @@ def get_router(moderation_queue, logger=None):
                        extra={"section": "server", "request_id": request_id})
             return {
                 "status": "Accepted",
-                "message": "voteContent has been queued",
+                "message": "content has been queued",
                 "data": None
             }
         except Exception as e:
