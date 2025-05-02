@@ -6,33 +6,51 @@ from fastapi.responses import JSONResponse
 from src.api.dtos.moderation_result_request import ModerationResultRequest
 from src.api.dtos.moderation_request import ModerationRequest
 import requests
+import uuid
+import datetime
 
-def get_router(moderation_queue):
+def get_router(moderation_queue, logger=None):
     router = APIRouter(prefix="/api/v1", tags=["Moderation"])
 
     @router.post("/moderation", status_code=status.HTTP_202_ACCEPTED)
     async def moderate(request: ModerationRequest):
-        #  TODO: 로그 남기기
+        # 요청 ID 생성 (없으면 UUID 사용)
+        request_id = str(request.voteId) if request.voteId else str(uuid.uuid4())
+        
+        # 요청 로깅
+        logger.info("검열 요청 수신", 
+                   extra={
+                       "section": "server", 
+                       "request_id": request_id,
+                       "content": request.voteContent
+                   })
+        
         if not request.voteContent.strip():
+            error_message = "voteContent must not be null, empty, or whitespace only."
+            logger.error(f"잘못된 요청: {error_message}", 
+                        extra={"section": "server", "request_id": request_id})
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
                     "status": "Bad Request",
-                    "message": "voteContent must not be null, empty, or whitespace only.",
+                    "message": error_message,
                     "data": None
                 }
             )
 
         try:
             moderation_queue.put(request)
-            #  TODO: 로그 남기기
+            logger.info(f"검열 요청 큐에 추가 완료 (ID={request_id})", 
+                       extra={"section": "server", "request_id": request_id})
             return {
                 "status": "Accepted",
                 "message": "voteContent has been queued",
                 "data": None
             }
         except Exception as e:
-            #  TODO: 로그 남기기
+            error_details = f"검열 요청 처리 중 오류 발생: {str(e)}"
+            logger.error(error_details, exc_info=True, 
+                        extra={"section": "server", "request_id": request_id})
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content={
@@ -44,6 +62,11 @@ def get_router(moderation_queue):
 
     @router.post("/moderation/test")  
     def send_result_test():
+        # 고정 ID 사용
+        request_id = "1"
+        logger.info("검열 결과 테스트 요청 시작", 
+                   extra={"section": "server", "request_id": request_id})
+        
         load_dotenv()
         be_server_ip = os.getenv("BE_SERVER_IP")
         be_server_port = os.getenv("BE_SERVER_PORT")
@@ -54,27 +77,56 @@ def get_router(moderation_queue):
         }
         
         moderation_result_request = ModerationResultRequest(
-            voteId=123,
-            result="REJCTED",
+            voteId=1,
+            result="REJECTED",
             reason="SPAM",
             reasonDetail="부적절한 표현이 발견되었습니다.",
             version="1.0.0"
         )
 
         try:
+            logger.info(f"검열 결과 전송 시작", 
+                       extra={"section": "server", "request_id": request_id})
+            
             response = requests.post(callback_url, json = dict(moderation_result_request), headers = headers)
+            
             if response.status_code == 201:
                 result = response.json()
+                # 검열 결과 전송 성공 로그를 CSV 파일에 남김
+                logger.info(f"검열 결과 전송 성공: HTTP {response.status_code}", 
+                           extra={
+                               "section": "server", 
+                               "request_id": request_id,
+                               "pred_label": "SPAM",  # 테스트용 값 추가
+                               "pred_score": "1.0",   # 테스트용 값 추가
+                               "model_version": "1.0.0"
+                           })
+                
                 print("[201 Created] 저장 성공:", result)
             elif response.status_code == 400:
-                print("[400 Bad Request] 요청이 잘못되었습니다:", response.text)
+                error_msg = f"검열 결과 전송 실패: HTTP {response.status_code}"
+                logger.error(error_msg, 
+                            extra={"section": "server", "request_id": request_id})
+                print(error_msg)
             elif response.status_code == 404:
-                print("[404 Not Found] 경로를 찾을 수 없습니다:", response.text)
+                error_msg = f"검열 결과 전송 실패: HTTP {response.status_code}"
+                logger.error(error_msg, 
+                            extra={"section": "server", "request_id": request_id})
+                print(error_msg)
             elif response.status_code == 500:
-                print("[500 Internal Server Error] 서버 오류:", response.text)
+                error_msg = f"검열 결과 전송 실패: HTTP {response.status_code}"
+                logger.error(error_msg, 
+                            extra={"section": "server", "request_id": request_id})
+                print(error_msg)
             else:
-                print(f"[{response.status_code}] 예상치 못한 응답:", response.text)
+                error_msg = f"검열 결과 전송 실패: HTTP {response.status_code}"
+                logger.error(error_msg, 
+                            extra={"section": "server", "request_id": request_id})
+                print(error_msg)
         except requests.exceptions.RequestException as e:
-            print("⚠️ 요청 중 예외 발생:", e)
+            error_msg = f"요청 중 오류 발생"
+            logger.error(error_msg, exc_info=True, 
+                        extra={"section": "server", "request_id": request_id})
+            print(f"⚠️ {error_msg}: {str(e)}")
 
     return router
