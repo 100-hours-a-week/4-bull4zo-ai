@@ -179,7 +179,7 @@ def init_process_logging(proc: str = "ai") -> logging.Logger:
     )
     moderation_handler.setLevel(logging.INFO)
     moderation_handler.setFormatter(logging.Formatter(
-        '%(asctime)s,%(levelname)s,%(section)s,%(request_id)s,%(content_hash)s,%(message)s'
+        '%(asctime)s [%(levelname)s] %(message)s'
     ))
     
     # 모더레이션 필터 - section이 'moderation'인 로그만 허용

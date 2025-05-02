@@ -226,8 +226,7 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 )
                 
                 inference_time = time.time() - start_time
-                logger.info(f"추론 시간: {inference_time:.2f}초", 
-                           extra={"section": "moderation", "request_id": request_id})
+                
                 
                 result = tokenizer.batch_decode(output_ids)[0]
                 
@@ -269,13 +268,17 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                                  extra={"section": "moderation", "request_id": request_id})
                 
                 # 모델 응답 로깅
-                logger.info(f"모델 응답: '{result}'", 
-                           extra={
-                               "section": "moderation",
-                               "request_id": request_id,
-                               "model_version": "v1.0.0",
-                               "inference_time": f"{inference_time:.2f}s"
-                           })
+                logger.info(json.dumps({
+                    "vote_id": moderation_request.voteId,
+                    "content": content,
+                    "model_response": result,
+                    "inference_time": f"{inference_time:.2f}s"
+                }, ensure_ascii=False), 
+                extra={
+                    "section": "moderation",
+                    "request_id": request_id,
+                    "model_version": "v1.0.0"
+                })
                 
                 # 결과 처리
                 final_result = ""
