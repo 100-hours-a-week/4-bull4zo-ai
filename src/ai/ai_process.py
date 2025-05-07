@@ -26,6 +26,18 @@ CATEGORY_MAPPING = {
     "기타": "OTHER"
 }
 
+# 부분 카테고리/유사어 매핑
+def normalize_category(cat):
+    return cat.replace(" ", "").strip()
+
+CATEGORY_ALIASES = {
+    normalize_category("개인정보 노출"): "사칭/사기/개인정보 노출",
+    normalize_category("개인 정보 노출"): "사칭/사기/개인정보 노출",
+    normalize_category("사칭"): "사칭/사기/개인정보 노출",
+    normalize_category("사기"): "사칭/사기/개인정보 노출",
+    # 추가 필요시 여기에
+}
+
 # 로거 초기화
 logger = init_process_logging("ai")
 
@@ -194,7 +206,25 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 
                 # 채팅 형식으로 입력 구성
                 chat = [
-                    {"role": "system", "content": "당신은 검열 시스템입니다. 입력된 텍스트가 부적절한지 판단하고 분류해야 합니다. 반드시 다음 형식으로만 답변하세요: 부적절한 내용이면 '검열 필요: [카테고리] [이유]', 적절한 내용이면 '검열 불필요: 적절한 표현입니다'. 카테고리는 다음 중 하나여야 합니다: '욕설/비방', '정치', '음란성/선정성', '스팸/광고', '사칭/사기/개인정보 노출', '기타'. 이유는 카테고리에 대한 설명이어야 합니다."},
+                    {"role": "system", "content": (
+                        "당신은 AI 검열 시스템입니다.\n"
+                        "아래의 규칙을 반드시 지키세요:\n"
+                        "- 반드시 '[카테고리]: [사유]' 형식으로만 답변하세요. (예: 욕설/비방: 욕설이 포함되어 있어 부적절합니다.)\n"
+                        "- '[카테고리]'는 반드시 아래 값 중 하나여야 합니다:\n"
+                        "  욕설/비방, 정치, 음란성/선정성, 스팸/광고, 사칭/사기/개인정보 노출, 기타, 적절\n"
+                        "- '[사유]'는 해당 카테고리로 분류한 이유를 구체적으로 작성하세요.\n"
+                        "- 적절한 내용일 경우 반드시 '검열 불필요: 적절한 표현입니다.'로 답변하세요. (예: 검열 불필요: 적절한 표현입니다.)\n"
+                        "- 절대 '검열 필요:', '부적절', '적절', '카테고리:' 등 다른 형식이나 영어로 시작하지 마세요.\n"
+                        "- 반드시 위에 제시된 한글 카테고리(정확히 일치)로만 시작하세요.\n\n"
+                        "아래 예시를 참고하여 반드시 동일한 형식으로 답변하세요.\n"
+                        "예시1)\n입력: 오늘 날씨가 좋네요.\n출력: 검열 불필요: 적절한 표현입니다.\n"
+                        "예시2)\n입력: 씨발새끼\n출력: 욕설/비방: 욕설이 포함되어 있어 부적절합니다.\n"
+                        "예시3)\n입력: 너랑 자고 싶어. 몸매 죽인다\n출력: 음란성/선정성: 성적으로 암시적인 표현이 포함되어 있어 부적절합니다.\n"
+                        "예시4)\n입력: 이 나라는 망했다. 정치인들은 다 똑같다.\n출력: 정치: 정치적 주장이 포함되어 있어 부적절합니다.\n"
+                        "예시5)\n입력: 무료로 돈 벌기! 지금 바로 클릭하세요!\n출력: 스팸/광고: 스팸/광고성 문구가 포함되어 있어 부적절합니다.\n"
+                        "예시6)\n입력: 저는 홍길동입니다\n출력: 사칭/사기/개인정보 노출: 사칭 또는 개인정보 노출이 감지되어 부적절합니다.\n"
+                        "예시7)\n입력: 아아아아아아아아\n출력: 기타: 기타 부적절한 내용이 감지되었습니다.\n"
+                    )},
                 ]
                 
                 # 관련 컨텍스트가 있다면 추가
@@ -286,7 +316,7 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 final_reason_detail = ""
                 
                 if result:  # 결과가 비어있지 않은 경우에만 처리
-                    if "검열 불필요" in result:
+                    if result.strip().startswith("검열 불필요: 적절한 표현입니다"):
                         final_result = "APPROVED"
                         final_reason = "적절한 표현입니다"
                         pred_label = "APPROVED"
@@ -306,29 +336,45 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                             if any(keyword in reason_detail for keyword in ["성적으로 암시", "성적", "음란", "선정"]):
                                 found_category_kr = "음란성/선정성"
                             else:
-                                # 2. 카테고리 부분에서 공백 제거 후 부분일치로 매칭
-                                for category in kr_categories:
-                                    if category.replace(" ", "") in category_part.replace(" ", ""):
-                                        found_category_kr = category
-                                        break
+                                # 2. 카테고리 부분을 normalize한 후 별칭 매핑을 먼저 시도
+                                category_part_norm = category_part.replace(" ", "")
+                                if category_part_norm in CATEGORY_ALIASES:
+                                    found_category_kr = CATEGORY_ALIASES[category_part_norm]
+                                else:
+                                    # 부분 일치로 kr_categories에서 찾기
+                                    for kr in kr_categories:
+                                        if category_part_norm in kr.replace(" ", ""):
+                                            found_category_kr = kr
+                                            break
                             # 이유가 없거나 카테고리명만 남으면 기본 메시지 설정
                             if not reason_detail or reason_detail.strip() in kr_categories:
                                 reason_detail = "부적절한 내용이 감지되었습니다."
                         else:
-                            # "검열 필요:" 없이 카테고리만 바로 있는 경우 (예: "욕설/비방")
-                            for category in kr_categories:
-                                if category.replace(" ", "") in result.replace(" ", ""):
-                                    found_category_kr = category
-                                    break
-                            # 카테고리 외의 내용은 상세 이유로
-                            temp_result = result
-                            for category in kr_categories:
-                                temp_result = temp_result.replace(category, "", 1)
-                            reason_detail = temp_result.strip()
-                            if not reason_detail or reason_detail in kr_categories:
+                            # 예외: '검열 필요: 카테고리' 등 잘못된 형식이 오면 한글 카테고리 추출 시도
+                            if result.startswith("검열 필요:"):
+                                category_kr = result.replace("검열 필요:", "").strip()
+                                found_category_kr = category_kr if category_kr in kr_categories else "기타"
                                 reason_detail = "부적절한 내용이 감지되었습니다."
+                            else:
+                                # "검열 필요:" 없이 카테고리만 바로 있는 경우 (예: "욕설/비방")
+                                result_no_space = result.replace(" ", "")
+                                for category in kr_categories:
+                                    if category.replace(" ", "") in result_no_space:
+                                        found_category_kr = category
+                                        break
+                                # 카테고리 외의 내용은 상세 이유로
+                                temp_result = result
+                                for category in kr_categories:
+                                    temp_result = temp_result.replace(category, "", 1)
+                                reason_detail = temp_result.strip()
+                                if not reason_detail or reason_detail in kr_categories:
+                                    reason_detail = "부적절한 내용이 감지되었습니다."
                         
                         # 한국어 카테고리를 영어 ENUM 코드로 변환
+                        # 부분 카테고리/유사어 매핑 적용 (normalize)
+                        norm_found_category_kr = normalize_category(found_category_kr)
+                        if norm_found_category_kr in CATEGORY_ALIASES:
+                            found_category_kr = CATEGORY_ALIASES[norm_found_category_kr]
                         found_category_en = CATEGORY_MAPPING.get(found_category_kr, "OTHER")
                         
                         final_reason = found_category_en  # 영어 ENUM 코드 사용
