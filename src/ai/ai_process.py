@@ -26,6 +26,18 @@ CATEGORY_MAPPING = {
     "기타": "OTHER"
 }
 
+# 부분 카테고리/유사어 매핑
+def normalize_category(cat):
+    return cat.replace(" ", "").strip()
+
+CATEGORY_ALIASES = {
+    normalize_category("개인정보 노출"): "사칭/사기/개인정보 노출",
+    normalize_category("개인 정보 노출"): "사칭/사기/개인정보 노출",
+    normalize_category("사칭"): "사칭/사기/개인정보 노출",
+    normalize_category("사기"): "사칭/사기/개인정보 노출",
+    # 추가 필요시 여기에
+}
+
 # 로거 초기화
 logger = init_process_logging("ai")
 
@@ -324,11 +336,16 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                             if any(keyword in reason_detail for keyword in ["성적으로 암시", "성적", "음란", "선정"]):
                                 found_category_kr = "음란성/선정성"
                             else:
-                                # 2. 카테고리 부분에서 공백 제거 후 부분일치로 매칭
-                                for category in kr_categories:
-                                    if category.replace(" ", "") in category_part.replace(" ", ""):
-                                        found_category_kr = category
-                                        break
+                                # 2. 카테고리 부분을 normalize한 후 별칭 매핑을 먼저 시도
+                                category_part_norm = category_part.replace(" ", "")
+                                if category_part_norm in CATEGORY_ALIASES:
+                                    found_category_kr = CATEGORY_ALIASES[category_part_norm]
+                                else:
+                                    # 부분 일치로 kr_categories에서 찾기
+                                    for kr in kr_categories:
+                                        if category_part_norm in kr.replace(" ", ""):
+                                            found_category_kr = kr
+                                            break
                             # 이유가 없거나 카테고리명만 남으면 기본 메시지 설정
                             if not reason_detail or reason_detail.strip() in kr_categories:
                                 reason_detail = "부적절한 내용이 감지되었습니다."
@@ -340,8 +357,9 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                                 reason_detail = "부적절한 내용이 감지되었습니다."
                             else:
                                 # "검열 필요:" 없이 카테고리만 바로 있는 경우 (예: "욕설/비방")
+                                result_no_space = result.replace(" ", "")
                                 for category in kr_categories:
-                                    if category.replace(" ", "") in result.replace(" ", ""):
+                                    if category.replace(" ", "") in result_no_space:
                                         found_category_kr = category
                                         break
                                 # 카테고리 외의 내용은 상세 이유로
@@ -353,6 +371,10 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                                     reason_detail = "부적절한 내용이 감지되었습니다."
                         
                         # 한국어 카테고리를 영어 ENUM 코드로 변환
+                        # 부분 카테고리/유사어 매핑 적용 (normalize)
+                        norm_found_category_kr = normalize_category(found_category_kr)
+                        if norm_found_category_kr in CATEGORY_ALIASES:
+                            found_category_kr = CATEGORY_ALIASES[norm_found_category_kr]
                         found_category_en = CATEGORY_MAPPING.get(found_category_kr, "OTHER")
                         
                         final_reason = found_category_en  # 영어 ENUM 코드 사용
