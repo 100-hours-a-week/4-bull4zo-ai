@@ -196,6 +196,7 @@ def init_process_logging(proc: str = "ai") -> logging.Logger:
         encoding="utf-8"
     )
     moderation_handler.setLevel(logging.INFO)
+
     moderation_handler.setFormatter(SafeExtraFormatter(
         '%(asctime)s,%(levelname)s,%(section)s,%(request_id)s,%(content_hash)s,%(message)s'
     ))
