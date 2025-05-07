@@ -128,6 +128,24 @@ class EmailHandler(logging.Handler):
         pass
 
 
+class SafeExtraFormatter(logging.Formatter):
+    """필수 extra 필드가 없을 때 기본값을 채워주는 포맷터"""
+    def format(self, record):
+        # 누락된 필드에 기본값 할당
+        for field, default in [
+            ("section", "-"),
+            ("request_id", "-"),
+            ("content_hash", "-"),
+            ("user_id", "-"),
+            ("pred_label", "-"),
+            ("pred_score", "-"),
+            ("model_version", "-")
+        ]:
+            if not hasattr(record, field):
+                setattr(record, field, default)
+        return super().format(record)
+
+
 # 글로벌 큐 리스너 참조
 _queue_listeners = {}
 
@@ -178,8 +196,9 @@ def init_process_logging(proc: str = "ai") -> logging.Logger:
         encoding="utf-8"
     )
     moderation_handler.setLevel(logging.INFO)
-    moderation_handler.setFormatter(logging.Formatter(
-        '%(asctime)s [%(levelname)s] %(message)s'
+
+    moderation_handler.setFormatter(SafeExtraFormatter(
+        '%(asctime)s,%(levelname)s,%(section)s,%(request_id)s,%(content_hash)s,%(message)s'
     ))
     
     # 모더레이션 필터 - section이 'moderation'인 로그만 허용
@@ -195,20 +214,20 @@ def init_process_logging(proc: str = "ai") -> logging.Logger:
         encoding="utf-8"
     )
     error_handler.setLevel(logging.ERROR)
-    error_handler.setFormatter(logging.Formatter(
+    error_handler.setFormatter(SafeExtraFormatter(
         '%(asctime)s [%(levelname)s] %(section)s:%(request_id)s - %(message)s'
     ))
     
     # 이메일 알림 핸들러 (오류 발생 시)
     email_handler = EmailHandler(level=logging.ERROR)
-    email_handler.setFormatter(logging.Formatter(
+    email_handler.setFormatter(SafeExtraFormatter(
         '[%(levelname)s] %(section)s:%(request_id)s - %(message)s'
     ))
     
     # 콘솔 핸들러 (개발/디버깅용)
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(logging.Formatter(
+    console_handler.setFormatter(SafeExtraFormatter(
         '%(asctime)s [%(levelname)s] %(section)s:%(request_id)s - %(message)s'
     ))
     
