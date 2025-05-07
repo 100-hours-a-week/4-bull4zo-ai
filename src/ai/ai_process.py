@@ -194,7 +194,7 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 
                 # 채팅 형식으로 입력 구성
                 chat = [
-                    {"role": "system", "content": "당신은 검열 시스템입니다. 입력된 텍스트가 부적절한지 판단하고 분류해야 합니다. 반드시 다음 형식으로만 답변하세요: 부적절한 내용이면 '검열 필요: [카테고리] [이유]', 적절한 내용이면 '검열 불필요: 적절한 표현입니다'. 카테고리는 다음 중 하나여야 합니다: '욕설/비방', '정치', '음란성/선정성', '스팸/광고', '사칭/사기/개인정보 노출', '기타'. 욕설의 경우 초성만 사용하거나 일부분만 사용한 경우('ㅅㅂ', '씨1발', '개ㅅㅂ' 등)도 욕설/비방으로 분류해야 합니다."},
+                    {"role": "system", "content": "당신은 검열 시스템입니다. 입력된 텍스트가 부적절한지 판단하고 분류해야 합니다. 반드시 다음 형식으로만 답변하세요: 부적절한 내용이면 '검열 필요: [카테고리] [이유]', 적절한 내용이면 '검열 불필요: 적절한 표현입니다'. 카테고리는 다음 중 하나여야 합니다: '욕설/비방', '정치', '음란성/선정성', '스팸/광고', '사칭/사기/개인정보 노출', '기타'. 이유는 카테고리에 대한 설명이어야 합니다."},
                 ]
                 
                 # 관련 컨텍스트가 있다면 추가
@@ -302,24 +302,30 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                         # 모델 응답에서 카테고리와 이유 분리 (콜론 앞: 카테고리, 콜론 뒤: 이유)
                         if ": " in result:
                             category_part, reason_detail = result.split(": ", 1)
-                            for category in kr_categories:
-                                if category in category_part:
-                                    found_category_kr = category
-                                    break
-                            # 이유가 없을 경우 기본 메시지 설정
-                            if not reason_detail:
+                            # 1. 성적으로 암시적인 내용이 있으면 무조건 SEXUAL_CONTENT
+                            if any(keyword in reason_detail for keyword in ["성적으로 암시", "성적", "음란", "선정"]):
+                                found_category_kr = "음란성/선정성"
+                            else:
+                                # 2. 카테고리 부분에서 공백 제거 후 부분일치로 매칭
+                                for category in kr_categories:
+                                    if category.replace(" ", "") in category_part.replace(" ", ""):
+                                        found_category_kr = category
+                                        break
+                            # 이유가 없거나 카테고리명만 남으면 기본 메시지 설정
+                            if not reason_detail or reason_detail.strip() in kr_categories:
                                 reason_detail = "부적절한 내용이 감지되었습니다."
                         else:
                             # "검열 필요:" 없이 카테고리만 바로 있는 경우 (예: "욕설/비방")
                             for category in kr_categories:
-                                if category in result:
+                                if category.replace(" ", "") in result.replace(" ", ""):
                                     found_category_kr = category
                                     break
                             # 카테고리 외의 내용은 상세 이유로
+                            temp_result = result
                             for category in kr_categories:
-                                result = result.replace(category, "", 1)
-                            reason_detail = result.strip()
-                            if not reason_detail:
+                                temp_result = temp_result.replace(category, "", 1)
+                            reason_detail = temp_result.strip()
+                            if not reason_detail or reason_detail in kr_categories:
                                 reason_detail = "부적절한 내용이 감지되었습니다."
                         
                         # 한국어 카테고리를 영어 ENUM 코드로 변환
