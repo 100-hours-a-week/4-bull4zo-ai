@@ -299,16 +299,13 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                         found_category_kr = "기타"  # 기본값 (한국어)
                         reason_detail = ""
                         
-                        # "검열 필요: [카테고리] [이유]" 형식 처리
+                        # 모델 응답에서 카테고리와 이유 분리 (콜론 앞: 카테고리, 콜론 뒤: 이유)
                         if ": " in result:
-                            content_part = result.split(": ", 1)[1]
-                            
+                            category_part, reason_detail = result.split(": ", 1)
                             for category in kr_categories:
-                                if category in content_part:
+                                if category in category_part:
                                     found_category_kr = category
-                                    reason_detail = content_part.replace(category, "", 1).strip()
                                     break
-                            
                             # 이유가 없을 경우 기본 메시지 설정
                             if not reason_detail:
                                 reason_detail = "부적절한 내용이 감지되었습니다."
@@ -318,11 +315,9 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                                 if category in result:
                                     found_category_kr = category
                                     break
-                            
                             # 카테고리 외의 내용은 상세 이유로
                             for category in kr_categories:
                                 result = result.replace(category, "", 1)
-                            
                             reason_detail = result.strip()
                             if not reason_detail:
                                 reason_detail = "부적절한 내용이 감지되었습니다."
