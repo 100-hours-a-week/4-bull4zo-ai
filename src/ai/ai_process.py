@@ -314,139 +314,120 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                 final_result = ""
                 final_reason = ""
                 final_reason_detail = ""
-                
-                if result:  # 결과가 비어있지 않은 경우에만 처리
-                    if result.strip().startswith("검열 불필요: 적절한 표현입니다"):
-                        final_result = "APPROVED"
-                        final_reason = "적절한 표현입니다"
-                        pred_label = "APPROVED"
-                        pred_score = "1.0"
-                    else:
-                        final_result = "REJECTED"
-                        
-                        # 카테고리 식별 (한국어)
-                        kr_categories = list(CATEGORY_MAPPING.keys())
-                        found_category_kr = "기타"  # 기본값 (한국어)
-                        reason_detail = ""
-                        
-                        # 모델 응답에서 카테고리와 이유 분리 (콜론 앞: 카테고리, 콜론 뒤: 이유)
-                        if ": " in result:
-                            category_part, reason_detail = result.split(": ", 1)
-                            # 1. 성적으로 암시적인 내용이 있으면 무조건 SEXUAL_CONTENT
-                            if any(keyword in reason_detail for keyword in ["성적으로 암시", "성적", "음란", "선정"]):
-                                found_category_kr = "음란성/선정성"
-                            else:
-                                # 2. 카테고리 부분을 normalize한 후 별칭 매핑을 먼저 시도
-                                category_part_norm = category_part.replace(" ", "")
-                                if category_part_norm in CATEGORY_ALIASES:
-                                    found_category_kr = CATEGORY_ALIASES[category_part_norm]
-                                else:
-                                    # 부분 일치로 kr_categories에서 찾기
-                                    for kr in kr_categories:
-                                        if category_part_norm in kr.replace(" ", ""):
-                                            found_category_kr = kr
-                                            break
-                            # 이유가 없거나 카테고리명만 남으면 기본 메시지 설정
-                            if not reason_detail or reason_detail.strip() in kr_categories:
-                                reason_detail = "부적절한 내용이 감지되었습니다."
-                        else:
-                            # 예외: '검열 필요: 카테고리' 등 잘못된 형식이 오면 한글 카테고리 추출 시도
-                            if result.startswith("검열 필요:"):
-                                category_kr = result.replace("검열 필요:", "").strip()
-                                found_category_kr = category_kr if category_kr in kr_categories else "기타"
-                                reason_detail = "부적절한 내용이 감지되었습니다."
-                            else:
-                                # "검열 필요:" 없이 카테고리만 바로 있는 경우 (예: "욕설/비방")
-                                result_no_space = result.replace(" ", "")
-                                for category in kr_categories:
-                                    if category.replace(" ", "") in result_no_space:
-                                        found_category_kr = category
-                                        break
-                                # 카테고리 외의 내용은 상세 이유로
-                                temp_result = result
-                                for category in kr_categories:
-                                    temp_result = temp_result.replace(category, "", 1)
-                                reason_detail = temp_result.strip()
-                                if not reason_detail or reason_detail in kr_categories:
-                                    reason_detail = "부적절한 내용이 감지되었습니다."
-                        
-                        # 한국어 카테고리를 영어 ENUM 코드로 변환
-                        # 부분 카테고리/유사어 매핑 적용 (normalize)
-                        norm_found_category_kr = normalize_category(found_category_kr)
-                        if norm_found_category_kr in CATEGORY_ALIASES:
-                            found_category_kr = CATEGORY_ALIASES[norm_found_category_kr]
-                        found_category_en = CATEGORY_MAPPING.get(found_category_kr, "OTHER")
-                        
-                        final_reason = found_category_en  # 영어 ENUM 코드 사용
-                        final_reason_detail = reason_detail
-                        pred_label = found_category_en
-                        pred_score = "0.9"  # 예시 점수
-                else:
-                    final_result = "ERROR"
-                    final_reason = "OTHER"
-                    final_reason_detail = "검열 결과를 얻을 수 없습니다"
-                    pred_label = "ERROR"
-                    pred_score = "0.0"
-                    logger.error("모델 응답이 없어 검열할 수 없습니다.",
-                                extra={"section": "moderation", "request_id": request_id})
-                
-                version = "1.0.0"  # 버전 정보
-
-                headers = {
-                    "Content-Type": "application/json"
-                }
-                
-                moderation_result_request = ModerationResultRequest(
-                    voteId=moderation_request.voteId if moderation_request.voteId is not None else 0,
-                    result=final_result,
-                    reason=final_reason,
-                    reasonDetail=final_reason_detail,
-                    version=version
-                )
-                
-                # 검열 결과 로깅
-                logger.info(f"검열 결과: {final_result}, 카테고리={final_reason}, 이유='{final_reason_detail}'",
-                           extra={
-                               "section": "server", 
-                               "request_id": request_id,
-                               "pred_label": pred_label,
-                               "pred_score": pred_score,
-                               "model_version": "v1.0.0"
-                           })
-
-                # 백엔드 서버로 검열 결과 전송
                 try:
-                    # voteId를 문자열로 변환
-                    request_id = str(moderation_request.voteId)
-                    
-                    logger.info(f"검열 결과 전송 시작", 
-                               extra={"section": "server", "request_id": request_id})
-                    
-                    # 실제 콜백 요청 보내기
-                    response = requests.post(callback_url, json=moderation_result_request.dict(), headers=headers)
-                    
-                    # 응답 결과 로깅
-                    if response.status_code == 201:
-                        logger.info(f"검열 결과 전송 성공: HTTP {response.status_code}",
-                                   extra={"section": "server", "request_id": request_id})
-                        
-                    elif response.status_code == 400:
-                        logger.error(f"검열 결과 전송 실패: HTTP {response.status_code}",
-                                    extra={"section": "server", "request_id": request_id})
-                    elif response.status_code == 404:
-                        logger.error(f"검열 결과 전송 실패: HTTP {response.status_code}",
-                                    extra={"section": "server", "request_id": request_id})
-                    elif response.status_code == 500:
-                        logger.error(f"검열 결과 전송 실패: HTTP {response.status_code}",
-                                    extra={"section": "server", "request_id": request_id})
+                    if result:
+                        if result.strip().startswith("검열 불필요: 적절한 표현입니다"):
+                            final_result = "APPROVED"
+                            final_reason = "NONE"
+                            final_reason_detail = "적절한 표현입니다"
+                            pred_label = "APPROVED"
+                            pred_score = "1.0"
+                        else:
+                            final_result = "REJECTED"
+                            # 카테고리 식별 (한국어)
+                            kr_categories = list(CATEGORY_MAPPING.keys())
+                            found_category_kr = "기타"  # 기본값 (한국어)
+                            reason_detail = ""
+                            if ": " in result:
+                                category_part, reason_detail = result.split(": ", 1)
+                                if any(keyword in reason_detail for keyword in ["성적으로 암시", "성적", "음란", "선정"]):
+                                    found_category_kr = "음란성/선정성"
+                                else:
+                                    category_part_norm = category_part.replace(" ", "")
+                                    if category_part_norm in CATEGORY_ALIASES:
+                                        found_category_kr = CATEGORY_ALIASES[category_part_norm]
+                                    else:
+                                        for kr in kr_categories:
+                                            if category_part_norm in kr.replace(" ", ""):
+                                                found_category_kr = kr
+                                                break
+                                if not reason_detail or reason_detail.strip() in kr_categories:
+                                    reason_detail = "부적절한 내용이 감지되었습니다."
+                            else:
+                                if result.startswith("검열 필요:"):
+                                    category_kr = result.replace("검열 필요:", "").strip()
+                                    found_category_kr = category_kr if category_kr in kr_categories else "기타"
+                                    reason_detail = "부적절한 내용이 감지되었습니다."
+                                else:
+                                    result_no_space = result.replace(" ", "")
+                                    for category in kr_categories:
+                                        if category.replace(" ", "") in result_no_space:
+                                            found_category_kr = category
+                                            break
+                                    temp_result = result
+                                    for category in kr_categories:
+                                        temp_result = temp_result.replace(category, "", 1)
+                                    reason_detail = temp_result.strip()
+                                    if not reason_detail or reason_detail in kr_categories:
+                                        reason_detail = "부적절한 내용이 감지되었습니다."
+                            norm_found_category_kr = normalize_category(found_category_kr)
+                            if norm_found_category_kr in CATEGORY_ALIASES:
+                                found_category_kr = CATEGORY_ALIASES[norm_found_category_kr]
+                            found_category_en = CATEGORY_MAPPING.get(found_category_kr, "OTHER")
+                            final_reason = found_category_en  # 영어 ENUM 코드 사용
+                            final_reason_detail = reason_detail
+                            pred_label = found_category_en
+                            pred_score = "0.9"  # 예시 점수
                     else:
-                        logger.error(f"검열 결과 전송 실패: HTTP {response.status_code}",
+                        final_result = "ERROR"
+                        final_reason = "OTHER"
+                        final_reason_detail = "검열 결과를 얻을 수 없습니다"
+                        pred_label = "ERROR"
+                        pred_score = "0.0"
+                        logger.error("모델 응답이 없어 검열할 수 없습니다.",
+                                    extra={"section": "moderation", "request_id": request_id})
+
+                    version = "1.0.0"  # 버전 정보
+                    headers = {
+                        "Content-Type": "application/json"
+                    }
+                    moderation_result_request = ModerationResultRequest(
+                        voteId=moderation_request.voteId if moderation_request.voteId is not None else 0,
+                        result=final_result,
+                        reason=final_reason,
+                        reasonDetail=final_reason_detail,
+                        version=version
+                    )
+                    # 검열 결과 로깅
+                    logger.info(f"검열 결과: {final_result}, 카테고리={final_reason}, 이유='{final_reason_detail}'",
+                               extra={
+                                   "section": "server", 
+                                   "request_id": request_id,
+                                   "pred_label": pred_label,
+                                   "pred_score": pred_score,
+                                   "model_version": "v1.0.0"
+                               })
+                    # 백엔드 서버로 검열 결과 전송
+                    try:
+                        # voteId를 문자열로 변환
+                        request_id = str(moderation_request.voteId)
+                        logger.info(f"검열 결과 전송 시작", 
+                                   extra={"section": "server", "request_id": request_id})
+                        # 실제 콜백 요청 보내기
+                        response = requests.post(callback_url, json=moderation_result_request.dict(), headers=headers)
+                        # 응답 결과 로깅
+                        if response.status_code == 201:
+                            logger.info(f"검열 결과 전송 성공: HTTP {response.status_code}",
+                                       extra={"section": "server", "request_id": request_id})
+                        elif response.status_code == 400:
+                            logger.error(f"검열 결과 전송 실패: HTTP {response.status_code}",
+                                        extra={"section": "server", "request_id": request_id})
+                        elif response.status_code == 404:
+                            logger.error(f"검열 결과 전송 실패: HTTP {response.status_code}",
+                                        extra={"section": "server", "request_id": request_id})
+                        elif response.status_code == 500:
+                            logger.error(f"검열 결과 전송 실패: HTTP {response.status_code}",
+                                        extra={"section": "server", "request_id": request_id})
+                        else:
+                            logger.error(f"검열 결과 전송 실패: HTTP {response.status_code}",
+                                        extra={"section": "server", "request_id": request_id})
+                    except requests.exceptions.RequestException as e:
+                        error_msg = f"검열 결과 전송 중 네트워크 오류: {str(e)}"
+                        logger.error(error_msg, exc_info=True,
                                     extra={"section": "server", "request_id": request_id})
-                except requests.exceptions.RequestException as e:
-                    error_msg = f"검열 결과 전송 중 네트워크 오류: {str(e)}"
-                    logger.error(error_msg, exc_info=True,
-                                extra={"section": "server", "request_id": request_id})
-                
+                except Exception as e:
+                    logger.error(f"결과 처리 중 오류: {str(e)}", exc_info=True,
+                                extra={"section": "moderation", "request_id": request_id})
             except Exception as e:
                 error_msg = f"검열 처리 중 오류 발생: {str(e)}"
                 logger.error(error_msg, exc_info=True,
