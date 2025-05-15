@@ -12,6 +12,7 @@
 RAG_data.docx
 chroma_db/
 *.csv
+keys/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
