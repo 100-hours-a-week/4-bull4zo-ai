@@ -15,6 +15,7 @@ import requests
 import json
 import datetime
 from src.common.logger_config import init_process_logging, shutdown_logging
+import re
 
 # 한글 카테고리를 영어 ENUM으로 맵핑
 CATEGORY_MAPPING = {
@@ -294,6 +295,30 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                     logger.error(f"응답 파싱 중 오류: {str(e)}", exc_info=True,
                                 extra={"section": "moderation", "request_id": request_id})
                     result = result.strip()
+                
+                # === 프롬프트 인젝션 방지: 출력 스펙 및 화이트리스트 검증 ===
+                valid_categories = [
+                    "욕설/비방", "정치", "음란성/선정성", "스팸/광고", "사칭/사기/개인정보 노출", "기타"
+                ]
+                valid_approved = "검열 불필요: 적절한 표현입니다."
+                def is_valid_output(text):
+                    # 시스템/컨텍스트 구분 문구 포함 시 무효
+                    if any(x in text for x in ["[시스템 지침]", "[RAG 컨텍스트]", "===="]):
+                        return False
+                    # 승인 케이스
+                    if text.strip() == valid_approved:
+                        return True
+                    # 카테고리: 사유 형식
+                    m = re.match(r"^([^:]+):\s*(.+)$", text.strip())
+                    if m:
+                        category = m.group(1).strip()
+                        if category in valid_categories:
+                            return True
+                    return False
+                if not is_valid_output(result):
+                    logger.warning(f"출력 스펙 위반 또는 인젝션 의심: '{result}'", extra={"section": "moderation", "request_id": request_id})
+                    # 무효 처리: 기타/에러로 분류
+                    result = "기타: 부적절한 내용이 감지되었습니다."
                 
                 if not result:
                     logger.warning("모델 응답이 비어있습니다.",
