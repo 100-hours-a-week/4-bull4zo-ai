@@ -128,6 +128,22 @@ def get_relevant_context(query: str, k: int = 3, similarity_threshold: float = 0
                     extra={"section": "rag"})
         return ""
 
+def validate_spec(response: str) -> bool:
+    """
+    모델 응답이 아래 스펙을 정확히 따르는지 검사:
+    - '검열 불필요: 적절한 표현입니다.'
+    - '[카테고리]: [사유]' (카테고리는 CATEGORY_MAPPING의 key 중 하나)
+    """
+    response = response.strip()
+    if response == "검열 불필요: 적절한 표현입니다.":
+        return True
+    # 카테고리: 사유 형식 검사
+    if ": " in response:
+        category, reason = response.split(": ", 1)
+        if category in CATEGORY_MAPPING.keys() and reason.strip():
+            return True
+    return False
+
 def run_model_process(stop_event: Event, moderation_queue: Queue):
     # Device 설정
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -294,6 +310,11 @@ def run_model_process(stop_event: Event, moderation_queue: Queue):
                     logger.error(f"응답 파싱 중 오류: {str(e)}", exc_info=True,
                                 extra={"section": "moderation", "request_id": request_id})
                     result = result.strip()
+
+                # validate_spec 적용: 스펙 위반시 즉시 부적절 처리
+                if not validate_spec(result):
+                    logger.warning(f"모델 응답이 스펙을 벗어남: '{result}'", extra={"section": "moderation", "request_id": request_id})
+                    result = "기타: 출력 스펙을 위반한 응답입니다."
                 
                 if not result:
                     logger.warning("모델 응답이 비어있습니다.",
