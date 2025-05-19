@@ -29,7 +29,7 @@ nvidia-cusparselt-cu12==0.6.3
 nvidia-nccl-cu12==2.26.2
 nvidia-nvjitlink-cu12==12.6.85
 nvidia-nvtx-cu12==12.6.77
-packaging==25.0
+packaging==24.0
 pydantic==2.11.3
 pydantic_core==2.33.1
 python-dotenv==1.1.0
@@ -55,5 +55,5 @@ av==14.3.0
 opencv-python==4.11.0.86
 decord==0.6.0
 langchain-openai==0.3.16
-docx2txt==1.0
+docx2txt==0.8
 chromadb==0.5.0
