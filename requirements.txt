@@ -54,3 +54,6 @@ timm==1.0.15
 av==14.3.0
 opencv-python==4.11.0.86
 decord==0.6.0
+langchain-openai==0.3.16
+docx2txt==1.0
+chromadb==0.5.0
