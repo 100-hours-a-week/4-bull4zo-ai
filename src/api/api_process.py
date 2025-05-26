@@ -4,10 +4,11 @@ from fastapi import FastAPI
 import uvicorn
 from src.api.controllers.moderation_controller import get_router
 from src.api.controllers.status_controller import status_router
+from src.api.controllers.word_controller import get_word_router
 from src.common.logger_config import init_process_logging, shutdown_logging
 import datetime
 
-def run_fastapi_process(moderation_queue: Queue):
+def run_fastapi_process(moderation_queue: Queue, result_queue: Queue):
     # API 로거 초기화
     logger = init_process_logging("api")
     logger.info("API 서버 프로세스 시작", extra={"section": "server", "request_id": "init"})
@@ -23,8 +24,9 @@ def run_fastapi_process(moderation_queue: Queue):
     app.state.logger = logger
     
     # 라우터 설정
-    app.include_router(get_router(moderation_queue, logger))
+    app.include_router(get_router(moderation_queue, result_queue, logger))
     app.include_router(status_router)
+    app.include_router(get_word_router(moderation_queue, result_queue))
     
     logger.info("API 서버 시작 준비 완료", extra={"section": "server", "request_id": "init"})
     print(f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S,%f')[:-3]} [INFO] server:init - API 서버 시작 준비 완료")
