@@ -3,7 +3,7 @@ from src.api.dtos.word_create_request import WordCreateRequest
 from src.services.word_pipeline import run_pipeline
 import json
 
-def get_word_router(moderation_queue, result_queue):
+def get_word_router(moderation_task_queue, result_queue):
     router = APIRouter(prefix="/api/v1", tags=["Words"])
     word_id_counter = {"value": 1}  # mutable dict로 클로저에서 값 변경
 
@@ -22,7 +22,7 @@ def get_word_router(moderation_queue, result_queue):
             }),
             extra={"section": "moderation", "request_id": str(word_id)}
         )
-        background_tasks.add_task(run_pipeline, word_id, body.word, moderation_queue, result_queue)
+        background_tasks.add_task(run_pipeline, word_id, body.word, moderation_task_queue, result_queue)
         return {"word_id": word_id, "status": "queued"}
 
     return router 

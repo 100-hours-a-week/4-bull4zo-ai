@@ -16,33 +16,11 @@ import json
 import datetime
 from src.common.logger_config import init_process_logging, shutdown_logging
 from src.ai.vote_generator import VoteGenerator
-from src.ai.moderation_llm import run_moderation
-from src.ai.moderation_utils import get_relevant_context, validate_spec, CATEGORY_MAPPING, CATEGORY_ALIASES, normalize_category
+from src.ai.moderation_llm import moderation_pipeline
+from src.ai.moderation_utils import get_relevant_context, validate_spec, CATEGORY_MAPPING, normalize_category
 from src.integrations.info_fetcher import InfoFetcher
 from src.integrations.moderation import moderate
 from src.integrations.delivery import Delivery
-
-# 한글 카테고리를 영어 ENUM으로 맵핑
-CATEGORY_MAPPING = {
-    "욕설/비방": "OFFENSIVE_LANGUAGE",
-    "정치": "POLITICAL_CONTENT",
-    "음란성/선정성": "SEXUAL_CONTENT",
-    "스팸/광고": "SPAM_ADVERTISEMENT",
-    "사칭/사기/개인정보 노출": "IMPERSONATION_OR_LEAK", 
-    "기타": "OTHER"
-}
-
-# 부분 카테고리/유사어 매핑
-def normalize_category(cat):
-    return cat.replace(" ", "").strip()
-
-CATEGORY_ALIASES = {
-    normalize_category("개인정보 노출"): "사칭/사기/개인정보 노출",
-    normalize_category("개인 정보 노출"): "사칭/사기/개인정보 노출",
-    normalize_category("사칭"): "사칭/사기/개인정보 노출",
-    normalize_category("사기"): "사칭/사기/개인정보 노출",
-    # 추가 필요시 여기에
-}
 
 # 로거 초기화
 logger = init_process_logging("ai")
@@ -134,23 +112,7 @@ def get_relevant_context(query: str, k: int = 3, similarity_threshold: float = 0
                     extra={"section": "rag"})
         return ""
 
-def validate_spec(response: str) -> bool:
-    """
-    모델 응답이 아래 스펙을 정확히 따르는지 검사:
-    - '검열 불필요: 적절한 표현입니다.'
-    - '[카테고리]: [사유]' (카테고리는 CATEGORY_MAPPING의 key 중 하나)
-    """
-    response = response.strip()
-    if response == "검열 불필요: 적절한 표현입니다.":
-        return True
-    # 카테고리: 사유 형식 검사
-    if ": " in response:
-        category, reason = response.split(": ", 1)
-        if category in CATEGORY_MAPPING.keys() and reason.strip():
-            return True
-    return False
-
-def run_model_process(stop_event: Event, moderation_queue: Queue, result_queue: Queue):
+def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_queue: Queue):
     # Device 설정
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger.info(f"추론 디바이스: {device}", 
@@ -210,13 +172,13 @@ def run_model_process(stop_event: Event, moderation_queue: Queue, result_queue: 
                extra={"section": "system", "request_id": "init"})
 
     while not stop_event.is_set():
-        if not moderation_queue.empty():
-            task = moderation_queue.get()
+        if not moderation_task_queue.empty():
+            task = moderation_task_queue.get()
             if isinstance(task, dict) and "type" in task:
                 task_type = task["type"]
                 data = task["data"]
                 if task_type == "moderation":
-                    result = run_moderation(data, model, tokenizer, device, callback_url, logger)
+                    result = moderation_pipeline(data, model, tokenizer, device, callback_url, logger)
                     result_queue.put(result)
                 elif task_type == "vote":
                     word_id = data.get("word_id")
@@ -238,10 +200,10 @@ def run_model_process(stop_event: Event, moderation_queue: Queue, result_queue: 
                         )
                         result_queue.put({"word_id": word_id, "status": "rejected"})
                     else:
-                        Delivery.push(word_id, vote)
+                        Delivery.push(word_id, vote, logger, str(word_id))
                         result_queue.put({"word_id": word_id, "status": "delivered"})
             else:
-                result = run_moderation(task, model, tokenizer, device, callback_url, logger)
+                result = moderation_pipeline(task, model, tokenizer, device, callback_url, logger)
                 result_queue.put(result)
         time.sleep(0.01)
     
@@ -251,12 +213,3 @@ def run_model_process(stop_event: Event, moderation_queue: Queue, result_queue: 
     # 로깅 시스템 종료
     shutdown_logging("ai")
 
-def run_vote_generation(data, model, tokenizer):
-    # data는 dict로 word, info 필드가 있다고 가정
-    word = data.get("word", "")
-    info = data.get("info", "")
-    vote_gen = VoteGenerator()
-    result = vote_gen.generate(word, info, model, tokenizer)
-    return result
-
-# run_moderation, run_vote_generation 함수는 파일 하단에 정의 또는 import 필요

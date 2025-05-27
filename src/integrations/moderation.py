@@ -1,4 +1,4 @@
-from src.ai.moderation_llm import run_moderation
+from src.ai.moderation_llm import moderation_pipeline
 
 def moderate(text: str, model, tokenizer, device, callback_url, logger) -> dict:
-    return run_moderation(text, model, tokenizer, device, callback_url, logger) 
+    return moderation_pipeline(text, model, tokenizer, device, callback_url, logger) 

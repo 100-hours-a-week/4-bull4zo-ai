@@ -9,7 +9,7 @@ import requests
 import uuid
 import datetime
 
-def get_router(moderation_queue, result_queue, logger=None):
+def get_router(moderation_task_queue, result_queue, logger=None):
     router = APIRouter(prefix="/api/v1", tags=["Moderation"])
 
     @router.post("/moderation", status_code=status.HTTP_202_ACCEPTED)
@@ -34,7 +34,7 @@ def get_router(moderation_queue, result_queue, logger=None):
                 }
             )
         try:
-            moderation_queue.put({"type": "moderation", "data": request})
+            moderation_task_queue.put({"type": "moderation", "data": request})
             logger.info(f"검열 요청 큐에 추가 완료 (ID={request_id})", 
                        extra={"section": "server", "request_id": request_id})
             # 비동기: 즉시 응답만 반환
@@ -111,7 +111,7 @@ def get_router(moderation_queue, result_queue, logger=None):
                        "content": str(request)
                    })
         try:
-            moderation_queue.put({"type": "vote", "data": request})
+            moderation_task_queue.put({"type": "vote", "data": request})
             logger.info(f"투표 생성 요청 큐에 추가 완료 (ID={request_id})", 
                        extra={"section": "server", "request_id": request_id})
             # 비동기: 즉시 응답만 반환

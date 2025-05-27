@@ -25,7 +25,7 @@ def main():
         dummy_server_process.start()
 
     # 프로세스간 공유할 Queue 생성
-    moderation_queue: Queue = Queue()
+    moderation_task_queue: Queue = Queue()
     result_queue: Queue = Queue()
 
     # Stop Event 생성
@@ -33,12 +33,12 @@ def main():
     stop_event = manager.Event()
 
     # 모델 프로세스 생성 및 시작
-    model_process = Process(target=run_model_process, args=(stop_event, moderation_queue, result_queue,))
+    model_process = Process(target=run_model_process, args=(stop_event, moderation_task_queue, result_queue,))
     logging.info("Starting Model Process")
     model_process.start()
 
     # API Server 프로세스 생성 및 시작
-    fastapi_process = Process(target=run_fastapi_process, args=(moderation_queue, result_queue,))
+    fastapi_process = Process(target=run_fastapi_process, args=(moderation_task_queue, result_queue,))
     logging.info("Starting FastAPI Process")
     fastapi_process.start()
 
