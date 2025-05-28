@@ -7,6 +7,12 @@ from src.api.controllers.status_controller import status_router
 from src.api.controllers.word_controller import get_word_router
 from src.common.logger_config import init_process_logging, shutdown_logging
 import datetime
+from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_fastapi_instrumentator.metrics import (
+    request_size,
+    response_size,
+    latency
+)
 
 def run_fastapi_process(moderation_task_queue: Queue, result_queue: Queue):
     # API 로거 초기화
@@ -27,6 +33,18 @@ def run_fastapi_process(moderation_task_queue: Queue, result_queue: Queue):
     app.include_router(get_router(moderation_task_queue, result_queue, logger))
     app.include_router(status_router)
     app.include_router(get_word_router(moderation_task_queue, result_queue))
+    
+    # Prometheus Instrumentator 설정 (고급 메트릭 포함)
+    instrumentator = Instrumentator(
+        should_group_status_codes=False,   # 2xx/4xx 묶지 않고 분리
+        should_ignore_untemplated=False,   # 라우터 파라미터 포함한 경로도 포함
+        should_respect_env_var=False,      # 환경 변수 무시
+        excluded_handlers=["/metrics"],    # /metrics 는 제외
+    )
+    instrumentator.add(latency())              # 요청 지연 시간
+    instrumentator.add(request_size())    # 요청 사이즈
+    instrumentator.add(response_size())   # 응답 사이즈
+    instrumentator.instrument(app).expose(app)
     
     logger.info("API 서버 시작 준비 완료", extra={"section": "server", "request_id": "init"})
     print(f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S,%f')[:-3]} [INFO] server:init - API 서버 시작 준비 완료")

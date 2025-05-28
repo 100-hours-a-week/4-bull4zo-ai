@@ -197,6 +197,7 @@ def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_qu
                                 "inference_time": mod.get("inference_time", "")
                             }),
                             extra={"section": "moderation", "request_id": str(word_id)}
+
                         )
                         result_queue.put({"word_id": word_id, "status": "rejected"})
                     else:
