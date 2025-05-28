@@ -100,4 +100,3 @@ jobs:
             docker ps
             docker cp ./RAG_data.docx moa-ai:/app
           EOF
-          
