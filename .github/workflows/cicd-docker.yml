@@ -1,0 +1,102 @@
+name: FastAPI Docker CI/CD - Tag Trigger
+
+on:
+  push:
+    branches:
+      - cicd/**
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout Repository
+        uses: actions/checkout@v3
+
+      - name: DockerHub Login
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+      - name: Extract Tag & Set Image Name
+        id: tagger
+        run: |
+          REF=${GITHUB_REF##*/}
+          COMMIT_SHA=${GITHUB_SHA}
+          IMAGE_NAME="4moa/moa-ai"
+          TAG=""
+
+          if [[ "$GITHUB_REF" =~ ^refs/heads/cicd/.*$ ]]; then
+            TAG="${COMMIT_SHA::7}"
+          elif [[ "$GITHUB_REF" =~ ^refs/tags/v.*$ ]]; then
+            TAG="$REF"
+          else
+            echo "❌ Not a deployable ref: $GITHUB_REF"
+            exit 1
+          fi
+
+          echo "::notice ::GITHUB_REF=$GITHUB_REF"
+          echo "::notice ::TAG=$TAG"
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "image_name=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify tag
+        run: |
+          if [ -z "${{ steps.tagger.outputs.tag }}" ]; then
+            echo "❌ TAG is empty. Stopping."
+            exit 1
+          fi
+
+      - name: Build & Push Docker Image
+        run: |
+          docker build -t ${{ steps.tagger.outputs.image_name }}:${{ steps.tagger.outputs.tag }} .
+          docker push ${{ steps.tagger.outputs.image_name }}:${{ steps.tagger.outputs.tag }}
+
+      - name: Save SSH Key
+        run: |
+          echo "${{ secrets.GCP_CICD_SSH_KEY }}" > key.pem
+          chmod 600 key.pem
+
+      - name: Debug Tag Info
+        run: |
+          echo "Image to run: ${{ steps.tagger.outputs.image_name }}:${{ steps.tagger.outputs.tag }}"
+
+      - name: Deploy to GCP AI Server
+        env:
+          IMAGE_NAME: ${{ steps.tagger.outputs.image_name }}
+          IMAGE_TAG: ${{ steps.tagger.outputs.tag }}
+        run: |
+          ssh -i key.pem -o StrictHostKeyChecking=no cicd@${{ secrets.GCP_AI_HOST }} <<EOF
+            set -e
+
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+            docker stop moa-ai || true
+            docker rm -f moa-ai || true
+            docker image prune -af --filter "until=48h" || true
+
+            docker pull ${{ steps.tagger.outputs.image_name }}:${{ steps.tagger.outputs.tag }}
+
+            echo "Generating .env file"
+            cat <<EENV | sudo tee /home/cicd/.env > /dev/null
+          ENVIRONMENT=${{ secrets.ENVIRONMENT }}
+          BE_SERVER_IP=${{ secrets.BE_SERVER_IP }}
+          BE_SERVER_PORT=${{ secrets.BE_SERVER_PORT }}
+          HF_TOKEN=${{ secrets.HF_TOKEN }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          EENV
+
+            sudo chmod 600 /home/cicd/.env
+            sudo chown cicd:cicd /home/cicd/.env
+
+            docker run -d --name moa-ai \
+              --restart unless-stopped \
+              --gpus all \
+              -p 8000:8000 \
+              --env-file /home/cicd/.env \
+              ${{ steps.tagger.outputs.image_name }}:${{ steps.tagger.outputs.tag }}
+
+            docker ps
+            docker cp ./RAG_data.docx moa-ai:/app
+          EOF
