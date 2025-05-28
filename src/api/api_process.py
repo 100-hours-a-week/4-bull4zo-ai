@@ -4,6 +4,7 @@ from fastapi import FastAPI
 import uvicorn
 from src.api.controllers.moderation_controller import get_router
 from src.api.controllers.status_controller import status_router
+from src.api.controllers.word_controller import get_word_router
 from src.common.logger_config import init_process_logging, shutdown_logging
 import datetime
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -13,7 +14,7 @@ from prometheus_fastapi_instrumentator.metrics import (
     latency
 )
 
-def run_fastapi_process(moderation_queue: Queue):
+def run_fastapi_process(moderation_task_queue: Queue, result_queue: Queue):
     # API 로거 초기화
     logger = init_process_logging("api")
     logger.info("API 서버 프로세스 시작", extra={"section": "server", "request_id": "init"})
@@ -29,8 +30,9 @@ def run_fastapi_process(moderation_queue: Queue):
     app.state.logger = logger
     
     # 라우터 설정
-    app.include_router(get_router(moderation_queue, logger))
+    app.include_router(get_router(moderation_task_queue, result_queue, logger))
     app.include_router(status_router)
+    app.include_router(get_word_router(moderation_task_queue, result_queue))
     
     # Prometheus Instrumentator 설정 (고급 메트릭 포함)
     instrumentator = Instrumentator(
