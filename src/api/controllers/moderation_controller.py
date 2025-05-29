@@ -105,11 +105,11 @@ def get_router(moderation_task_queue, result_queue, logger=None):
     async def vote_generate(request: dict):
         request_id = str(uuid.uuid4())
         logger.info("투표 생성 요청 수신", 
-                   extra={
-                       "section": "server", 
-                       "request_id": request_id,
-                       "content": str(request)
-                   })
+            extra={
+                "section": "server", 
+                "request_id": request_id,
+                "content": str(request)
+            })
         try:
             moderation_task_queue.put({"type": "vote", "data": request})
             logger.info(f"투표 생성 요청 큐에 추가 완료 (ID={request_id})", 
