@@ -657,9 +657,8 @@ zipp==3.21.0
     # via importlib-metadata
 zstandard==0.23.0
     # via langsmith
+prometheus-fastapi-instrumentator==7.1.0
 
+prometheus-client==0.22.0
 # The following packages are considered to be unsafe in a requirements file:
-
-# pip
 # setuptools
-

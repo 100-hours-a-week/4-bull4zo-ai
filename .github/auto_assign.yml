@@ -1,0 +1,9 @@
+addReviewers: true
+numberOfReviewers: 3
+reviewers:
+  - Taeseong-eom
+  - ybkimdev
+  - yunabyte
+  - Mason-P-ark
+
+addAssignees: false
