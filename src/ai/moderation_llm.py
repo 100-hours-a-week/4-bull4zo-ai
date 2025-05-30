@@ -148,7 +148,7 @@ def moderation_pipeline(moderation_request, model, tokenizer, device, callback_u
         chat = build_moderation_prompt(moderation_request, relevant_context)
         raw_response, inference_time = run_llm_inference(chat, model, tokenizer, device)
         result = parse_moderation_response(raw_response)
-        version = "1.3.0"
+        version = "1.3.1"
         if not validate_spec(result):
             logger.warning(f"모델 응답이 스펙을 벗어남: '{result}'", extra={"section": "moderation", "request_id": request_id})
             result = "기타: 출력 스펙을 위반한 응답입니다."
