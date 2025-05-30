@@ -13,7 +13,7 @@ def build_moderation_prompt(moderation_request, relevant_context):
                      "당신은 AI 검열 시스템입니다.\n"
                      "아래의 규칙을 반드시 지키세요:\n"
                      "- 반드시 '[카테고리]: [사유]' 형식으로만 답변하세요. (예: 욕설/비방: 욕설이 포함되어 있어 부적절합니다.)\n"
-                     "- '[카테고리]'는 반드시 아래 값 중 하나여야 합니다:\n"
+                     "[카테고리]'는 필요할 경우 아래 중 하나를 선택하세요. 판단이 어려우면 '검열 불필요'로 답변하세요.\n"
                      "  욕설/비방, 정치, 음란성/선정성, 스팸/광고, 사칭/사기/개인정보 노출, 기타, 적절\n"
                      "- '[사유]'는 해당 카테고리로 분류한 이유를 구체적으로 작성하세요.\n"
                      "- 적절한 내용일 경우 반드시 '검열 불필요: 적절한 표현입니다.'로만 답변하세요. (예: 검열 불필요: 적절한 표현입니다.)\n"
@@ -50,9 +50,7 @@ def run_llm_inference(chat, model, tokenizer, device):
     output_ids = model.generate(
         input_ids,
         max_new_tokens=128,
-        do_sample=True,
-        top_p=0.9,
-        temperature=0.3,
+        do_sample=False,
         repetition_penalty=1.2,
         pad_token_id=tokenizer.pad_token_id,
         eos_token_id=tokenizer.eos_token_id,
@@ -150,6 +148,7 @@ def moderation_pipeline(moderation_request, model, tokenizer, device, callback_u
         chat = build_moderation_prompt(moderation_request, relevant_context)
         raw_response, inference_time = run_llm_inference(chat, model, tokenizer, device)
         result = parse_moderation_response(raw_response)
+        version = "1.3.1"
         if not validate_spec(result):
             logger.warning(f"모델 응답이 스펙을 벗어남: '{result}'", extra={"section": "moderation", "request_id": request_id})
             result = "기타: 출력 스펙을 위반한 응답입니다."
@@ -160,7 +159,7 @@ def moderation_pipeline(moderation_request, model, tokenizer, device, callback_u
             "content": content,
             "model_response": result,
             "inference_time": f"{inference_time:.2f}s"
-        }, ensure_ascii=False), extra={"section": "moderation", "request_id": request_id, "model_version": "v1.0.0"})
+        }, ensure_ascii=False), extra={"section": "moderation", "request_id": request_id, "model_version": version})
         if result.strip().startswith("검열 불필요: 적절한 표현입니다"):
             final_result = "APPROVED"
             final_reason = "NONE"
@@ -174,7 +173,6 @@ def moderation_pipeline(moderation_request, model, tokenizer, device, callback_u
             final_reason_detail = reason_detail
             pred_label = found_category_en
             pred_score = "0.9"
-        version = "1.0.0"
         moderation_result_request = ModerationResultRequest(
             voteId=moderation_request.voteId if moderation_request.voteId is not None else 0,
             result=final_result,
@@ -182,7 +180,7 @@ def moderation_pipeline(moderation_request, model, tokenizer, device, callback_u
             reasonDetail=final_reason_detail,
             version=version
         )
-        logger.info(f"검열 결과: {final_result}, 카테고리={final_reason}, 이유='{final_reason_detail}'", extra={"section": "server", "request_id": request_id, "pred_label": pred_label, "pred_score": pred_score, "model_version": "v1.0.0"})
+        logger.info(f"검열 결과: {final_result}, 카테고리={final_reason}, 이유='{final_reason_detail}'", extra={"section": "server", "request_id": request_id, "pred_label": pred_label, "pred_score": pred_score, "model_version": version})
         send_moderation_callback(moderation_result_request, callback_url, logger, request_id)
         return moderation_result_request.dict()
     except Exception as e:
