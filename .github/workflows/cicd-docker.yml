@@ -3,9 +3,7 @@ name: FastAPI Docker CI/CD - Tag Trigger
 on:
   push:
     branches:
-      - cicd/**
-    tags:
-      - 'v*'
+      - main
 
 jobs:
   build-and-deploy:
@@ -14,6 +12,42 @@ jobs:
     steps:
       - name: checkout Repository
         uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      - name: Extract Version
+        id: version
+        run: |
+          VERSION=$(grep 'version *= *"v' src/ai/moderation_llm.py | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "Extracted version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Git config
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+
+      - name: Set remote URL with PAT
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          git remote set-url origin https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}
+          git fetch --tags
+
+      - name: Create Git Tag (if not exists)
+        if: github.ref_name == 'main'
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          TAG=${{ steps.version.outputs.version }}
+          if git rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "✅ Tag $TAG already exists"
+          else
+            git tag $TAG
+            git push origin $TAG
+            echo "✅ Created Git tag: $TAG"
+          fi
 
       - name: DockerHub Login
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
@@ -26,10 +60,8 @@ jobs:
           IMAGE_NAME="4moa/moa-ai"
           TAG=""
 
-          if [[ "$GITHUB_REF" =~ ^refs/heads/cicd/.*$ ]]; then
-            TAG="${COMMIT_SHA::7}"
-          elif [[ "$GITHUB_REF" =~ ^refs/tags/v.*$ ]]; then
-            TAG="$REF"
+          if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+            TAG="${{ steps.version.outputs.version }}"
           else
             echo "❌ Not a deployable ref: $GITHUB_REF"
             exit 1
