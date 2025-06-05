@@ -1,0 +1,230 @@
+[33m759faef[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/117[m[33m)[m HEAD@{0}: reset: moving to HEAD~1
+[33m4602970[m[33m ([m[1;31morigin/feature/117[m[33m)[m HEAD@{1}: commit (amend): feat: 단어 정보 확인#117
+[33m2f09986[m HEAD@{2}: merge origin/develop: Merge made by the 'ort' strategy.
+[33m759faef[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/117[m[33m)[m HEAD@{3}: commit (amend): feat: 단어 정보 확인#117
+[33ma03c43d[m HEAD@{4}: commit: feat:
+[33m12c3292[m[33m ([m[1;32mdevelop[m[33m)[m HEAD@{5}: checkout: moving from develop to feature/117
+[33m12c3292[m[33m ([m[1;32mdevelop[m[33m)[m HEAD@{6}: checkout: moving from develop to develop
+[33m12c3292[m[33m ([m[1;32mdevelop[m[33m)[m HEAD@{7}: merge main: Merge made by the 'ort' strategy.
+[33m0adfb51[m HEAD@{8}: checkout: moving from main to develop
+[33m324750b[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m HEAD@{9}: checkout: moving from develop to main
+[33m0adfb51[m HEAD@{10}: reset: moving to HEAD~1
+[33m7630f22[m HEAD@{11}: checkout: moving from develop to develop
+[33m7630f22[m HEAD@{12}: merge main: Merge made by the 'ort' strategy.
+[33m0adfb51[m HEAD@{13}: checkout: moving from main to develop
+[33m324750b[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m HEAD@{14}: pull origin main: Fast-forward
+[33m79f9673[m HEAD@{15}: checkout: moving from develop to main
+[33m0adfb51[m HEAD@{16}: merge origin/main: Merge made by the 'ort' strategy.
+[33mc523afb[m[33m ([m[1;33mtag: [m[1;33mv1.3.0[m[33m, [m[1;31morigin/release/v1.3.0[m[33m, [m[1;32mrelease/v1.3.0[m[33m)[m HEAD@{17}: checkout: moving from hotfix/123 to develop
+[33m3dfc4e4[m[33m ([m[1;33mtag: [m[1;33mv1.3.1[m[33m, [m[1;31morigin/hotfix/123[m[33m, [m[1;32mhotfix/123[m[33m)[m HEAD@{18}: commit: hotfix: 과도한 검열 수정#123
+[33m08f12a2[m HEAD@{19}: reset: moving to HEAD^
+[33m3548bc2[m HEAD@{20}: commit: feat: inprogress 추가#119
+[33m08f12a2[m HEAD@{21}: cherry-pick: hotfix: 과도한 검열 수정#123
+[33m79f9673[m HEAD@{22}: checkout: moving from main to hotfix/123
+[33m79f9673[m HEAD@{23}: pull origin main: Fast-forward
+[33mddf3bde[m[33m ([m[1;33mtag: [m[1;33mv1.0.0[m[33m, [m[1;31morigin/release/v1.0.0[m[33m, [m[1;32msquash/release-v1.0.0[m[33m, [m[1;32mrelease/v1.0.0[m[33m)[m HEAD@{24}: checkout: moving from bugfix/123 to main
+[33me2d8a35[m[33m ([m[1;32mbugfix/123[m[33m)[m HEAD@{25}: commit: hotfix: 과도한 검열 수정#123
+[33mc523afb[m[33m ([m[1;33mtag: [m[1;33mv1.3.0[m[33m, [m[1;31morigin/release/v1.3.0[m[33m, [m[1;32mrelease/v1.3.0[m[33m)[m HEAD@{26}: checkout: moving from develop to bugfix/123
+[33mc523afb[m[33m ([m[1;33mtag: [m[1;33mv1.3.0[m[33m, [m[1;31morigin/release/v1.3.0[m[33m, [m[1;32mrelease/v1.3.0[m[33m)[m HEAD@{27}: checkout: moving from release/v1.3.0 to develop
+[33mc523afb[m[33m ([m[1;33mtag: [m[1;33mv1.3.0[m[33m, [m[1;31morigin/release/v1.3.0[m[33m, [m[1;32mrelease/v1.3.0[m[33m)[m HEAD@{28}: checkout: moving from develop to release/v1.3.0
+[33mc523afb[m[33m ([m[1;33mtag: [m[1;33mv1.3.0[m[33m, [m[1;31morigin/release/v1.3.0[m[33m, [m[1;32mrelease/v1.3.0[m[33m)[m HEAD@{29}: checkout: moving from release/v1.3.0 to develop
+[33mc523afb[m[33m ([m[1;33mtag: [m[1;33mv1.3.0[m[33m, [m[1;31morigin/release/v1.3.0[m[33m, [m[1;32mrelease/v1.3.0[m[33m)[m HEAD@{30}: checkout: moving from release/v1.2.0 to release/v1.3.0
+[33md824c53[m[33m ([m[1;33mtag: [m[1;33mv1.2.0[m[33m, [m[1;31morigin/release/v1.2.0[m[33m, [m[1;32mrelease/v1.2.0[m[33m)[m HEAD@{31}: checkout: moving from release/v1.2.0 to release/v1.2.0
+[33md824c53[m[33m ([m[1;33mtag: [m[1;33mv1.2.0[m[33m, [m[1;31morigin/release/v1.2.0[m[33m, [m[1;32mrelease/v1.2.0[m[33m)[m HEAD@{32}: checkout: moving from release/v1.3.0 to release/v1.2.0
+[33mc523afb[m[33m ([m[1;33mtag: [m[1;33mv1.3.0[m[33m, [m[1;31morigin/release/v1.3.0[m[33m, [m[1;32mrelease/v1.3.0[m[33m)[m HEAD@{33}: checkout: moving from develop to release/v1.3.0
+[33mc523afb[m[33m ([m[1;33mtag: [m[1;33mv1.3.0[m[33m, [m[1;31morigin/release/v1.3.0[m[33m, [m[1;32mrelease/v1.3.0[m[33m)[m HEAD@{34}: commit (merge): main 브랜치 병합
+[33m54b3564[m HEAD@{35}: pull: Fast-forward
+[33m1923af8[m HEAD@{36}: checkout: moving from feature/119 to develop
+[33m7399d12[m[33m ([m[1;31morigin/feature/119[m[33m, [m[1;32mfeature/119[m[33m)[m HEAD@{37}: commit: feat: inprogress 추가#119
+[33mc67fcb9[m HEAD@{38}: commit: feat: inprogress 추가#119
+[33m1923af8[m HEAD@{39}: checkout: moving from develop to feature/119
+[33m1923af8[m HEAD@{40}: checkout: moving from feature/117 to develop
+[33m1923af8[m HEAD@{41}: checkout: moving from develop to feature/117
+[33m1923af8[m HEAD@{42}: pull: Fast-forward
+[33m4135e5b[m HEAD@{43}: checkout: moving from bugfix/115 to develop
+[33mb7e2c8b[m[33m ([m[1;31morigin/bugfix/115[m[33m, [m[1;32mbugfix/115[m[33m)[m HEAD@{44}: commit: bugfix: LLLM 검열 응답이 출력 스펙을 위반 수정사항 재반영#115
+[33m4135e5b[m HEAD@{45}: checkout: moving from develop to bugfix/115
+[33m4135e5b[m HEAD@{46}: checkout: moving from bugfix/113 to develop
+[33m1f05942[m[33m ([m[1;31morigin/bugfix/113[m[33m, [m[1;32mbugfix/113[m[33m)[m HEAD@{47}: commit: bugfix: not defined 에러#113
+[33m4135e5b[m HEAD@{48}: checkout: moving from develop to bugfix/113
+[33m4135e5b[m HEAD@{49}: checkout: moving from bugfix/111 to develop
+[33mc753bb5[m[33m ([m[1;31morigin/bugfix/111[m[33m, [m[1;32mbugfix/111[m[33m)[m HEAD@{50}: commit: bugfix: docker 환경 의존성 반영#111
+[33m4135e5b[m HEAD@{51}: checkout: moving from develop to bugfix/111
+[33m4135e5b[m HEAD@{52}: reset: moving to origin/develop
+[33m4135e5b[m HEAD@{53}: checkout: moving from develop to develop
+[33m4135e5b[m HEAD@{54}: checkout: moving from bugfix/111 to develop
+[33me5fb23d[m HEAD@{55}: reset: moving to HEAD~1
+[33m1cc5253[m[33m ([m[1;31morigin/feature/97[m[33m, [m[1;32mfeature/97[m[33m)[m HEAD@{56}: reset: moving to HEAD~1
+[33m192e02a[m HEAD@{57}: checkout: moving from develop to bugfix/111
+[33m4135e5b[m HEAD@{58}: pull: Fast-forward
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{59}: checkout: moving from bugfix/111 to develop
+[33m192e02a[m HEAD@{60}: commit: bugfix: docker 환경 의존성 반영#111
+[33m1cc5253[m[33m ([m[1;31morigin/feature/97[m[33m, [m[1;32mfeature/97[m[33m)[m HEAD@{61}: checkout: moving from feature/97 to bugfix/111
+[33m1cc5253[m[33m ([m[1;31morigin/feature/97[m[33m, [m[1;32mfeature/97[m[33m)[m HEAD@{62}: pull --rebase origin feature/97 (finish): returning to refs/heads/feature/97
+[33m1cc5253[m[33m ([m[1;31morigin/feature/97[m[33m, [m[1;32mfeature/97[m[33m)[m HEAD@{63}: pull --rebase origin feature/97 (pick): feat: 투표 생성 기능 아키텍쳐 설계#97
+[33me5fb23d[m HEAD@{64}: pull --rebase origin feature/97 (start): checkout e5fb23d5bcf46f5460f10f51f3079e8d75550dc7
+[33mc133e30[m HEAD@{65}: commit: feat: 투표 생성 기능 아키텍쳐 설계#97
+[33mc283633[m HEAD@{66}: checkout: moving from bugfix/109 to feature/97
+[33m115e5cf[m[33m ([m[1;31morigin/bugfix/109[m[33m, [m[1;32mbugfix/109[m[33m)[m HEAD@{67}: commit: bugfix: LLM 검열 응답이 출력 스펙을 위반하여 REJECT 처리됨#109
+[33m80acd9b[m[33m ([m[1;31morigin/feature/107[m[33m, [m[1;32mfeature/107[m[33m)[m HEAD@{68}: checkout: moving from feature/107 to bugfix/109
+[33m80acd9b[m[33m ([m[1;31morigin/feature/107[m[33m, [m[1;32mfeature/107[m[33m)[m HEAD@{69}: commit: feat: Prometheus 모니터링 도입을 위한 Instr
+[33m267687a[m HEAD@{70}: commit: feat: Prometheus 모니터링 도입을 위한 Instrumentator 설정#107
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{71}: checkout: moving from develop to feature/107
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{72}: reset: moving to origin/develop
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{73}: reset: moving to origin/develop
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{74}: checkout: moving from feature/107 to develop
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{75}: checkout: moving from develop to feature/107
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{76}: checkout: moving from feature/107 to develop
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{77}: checkout: moving from develop to feature/107
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{78}: checkout: moving from feature/97 to develop
+[33mc283633[m HEAD@{79}: commit: feat: 투표 생성 기능 아키텍쳐 설계#97
+[33m08b10f7[m HEAD@{80}: commit: feat: 투표 생성 기능 아키텍쳐 설계#97
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{81}: checkout: moving from release/v1.0.1 to feature/97
+[33m8294357[m[33m ([m[1;32mrelease/v1.0.1[m[33m)[m HEAD@{82}: commit: release: requirements update
+[33mbe3b5a0[m HEAD@{83}: checkout: moving from feature/97 to release/v1.0.1
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{84}: reset: moving to HEAD
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{85}: checkout: moving from release/v1.0.1 to feature/97
+[33mbe3b5a0[m HEAD@{86}: commit: relseas: v1.0.1 requriements update
+[33mddf3bde[m[33m ([m[1;33mtag: [m[1;33mv1.0.0[m[33m, [m[1;31morigin/release/v1.0.0[m[33m, [m[1;32msquash/release-v1.0.0[m[33m, [m[1;32mrelease/v1.0.0[m[33m)[m HEAD@{87}: reset: moving to HEAD
+[33mddf3bde[m[33m ([m[1;33mtag: [m[1;33mv1.0.0[m[33m, [m[1;31morigin/release/v1.0.0[m[33m, [m[1;32msquash/release-v1.0.0[m[33m, [m[1;32mrelease/v1.0.0[m[33m)[m HEAD@{88}: reset: moving to HEAD~1
+[33mc118bc2[m HEAD@{89}: commit: relseas: v1.0.1 requriements update
+[33mddf3bde[m[33m ([m[1;33mtag: [m[1;33mv1.0.0[m[33m, [m[1;31morigin/release/v1.0.0[m[33m, [m[1;32msquash/release-v1.0.0[m[33m, [m[1;32mrelease/v1.0.0[m[33m)[m HEAD@{90}: checkout: moving from main to release/v1.0.1
+[33mddf3bde[m[33m ([m[1;33mtag: [m[1;33mv1.0.0[m[33m, [m[1;31morigin/release/v1.0.0[m[33m, [m[1;32msquash/release-v1.0.0[m[33m, [m[1;32mrelease/v1.0.0[m[33m)[m HEAD@{91}: checkout: moving from develop to main
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{92}: checkout: moving from main to develop
+[33mddf3bde[m[33m ([m[1;33mtag: [m[1;33mv1.0.0[m[33m, [m[1;31morigin/release/v1.0.0[m[33m, [m[1;32msquash/release-v1.0.0[m[33m, [m[1;32mrelease/v1.0.0[m[33m)[m HEAD@{93}: checkout: moving from feature/97 to main
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{94}: reset: moving to HEAD
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{95}: checkout: moving from develop to feature/97
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{96}: checkout: moving from feature/99 to develop
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{97}: checkout: moving from develop to feature/99
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{98}: checkout: moving from feature/99 to develop
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{99}: merge develop: Fast-forward
+[33m0e7fbac[m HEAD@{100}: checkout: moving from develop to feature/99
+[33mb4fef72[m[33m ([m[1;32mfeature/99[m[33m)[m HEAD@{101}: pull: Fast-forward
+[33m0e7fbac[m HEAD@{102}: checkout: moving from release/v1.0.0 to develop
+[33mddf3bde[m[33m ([m[1;33mtag: [m[1;33mv1.0.0[m[33m, [m[1;31morigin/release/v1.0.0[m[33m, [m[1;32msquash/release-v1.0.0[m[33m, [m[1;32mrelease/v1.0.0[m[33m)[m HEAD@{103}: checkout: moving from main to release/v1.0.0
+[33mddf3bde[m[33m ([m[1;33mtag: [m[1;33mv1.0.0[m[33m, [m[1;31morigin/release/v1.0.0[m[33m, [m[1;32msquash/release-v1.0.0[m[33m, [m[1;32mrelease/v1.0.0[m[33m)[m HEAD@{104}: reset: moving to squash/release-v1.0.0
+[33m95185a5[m HEAD@{105}: checkout: moving from squash/release-v1.0.0 to main
+[33mddf3bde[m[33m ([m[1;33mtag: [m[1;33mv1.0.0[m[33m, [m[1;31morigin/release/v1.0.0[m[33m, [m[1;32msquash/release-v1.0.0[m[33m, [m[1;32mrelease/v1.0.0[m[33m)[m HEAD@{106}: commit (amend): release: v1.0.0
+[33mc9bb6e6[m HEAD@{107}: rebase (finish): returning to refs/heads/squash/release-v1.0.0
+[33mc9bb6e6[m HEAD@{108}: rebase (squash): base code upload
+[33mffaca79[m HEAD@{109}: rebase (squash): # This is a combination of 15 commits.
+[33m6355454[m HEAD@{110}: rebase (squash): # This is a combination of 14 commits.
+[33m13d9468[m HEAD@{111}: rebase (squash): # This is a combination of 13 commits.
+[33m67a1ba7[m HEAD@{112}: rebase (squash): # This is a combination of 12 commits.
+[33m0d11922[m HEAD@{113}: rebase (squash): # This is a combination of 11 commits.
+[33m38d70ba[m HEAD@{114}: rebase (squash): # This is a combination of 10 commits.
+[33m3eb3f94[m HEAD@{115}: rebase (squash): # This is a combination of 9 commits.
+[33md01c857[m HEAD@{116}: rebase (squash): # This is a combination of 8 commits.
+[33mdcaee1e[m HEAD@{117}: rebase (squash): # This is a combination of 7 commits.
+[33mf6dfbb3[m HEAD@{118}: rebase (squash): # This is a combination of 6 commits.
+[33m8a40f9c[m HEAD@{119}: rebase (squash): # This is a combination of 5 commits.
+[33me3d04f9[m HEAD@{120}: rebase (squash): # This is a combination of 4 commits.
+[33m5d1d708[m HEAD@{121}: rebase (squash): # This is a combination of 3 commits.
+[33m9b4db25[m HEAD@{122}: rebase (squash): # This is a combination of 2 commits.
+[33mc82e499[m HEAD@{123}: rebase: fast-forward
+[33m112de6a[m HEAD@{124}: rebase (start): checkout 112de6a7a1681ab254941a7204416e58dfa9c461
+[33m3a971b3[m HEAD@{125}: rebase (finish): returning to refs/heads/squash/release-v1.0.0
+[33m3a971b3[m HEAD@{126}: rebase: fast-forward
+[33m0cfbce1[m HEAD@{127}: rebase: fast-forward
+[33mba0adaf[m HEAD@{128}: rebase: fast-forward
+[33m89c5e26[m HEAD@{129}: rebase: fast-forward
+[33mbacf138[m HEAD@{130}: rebase: fast-forward
+[33mc5919d0[m HEAD@{131}: rebase: fast-forward
+[33m4d6b1cf[m HEAD@{132}: rebase: fast-forward
+[33m2e37621[m HEAD@{133}: rebase: fast-forward
+[33m8ce961a[m HEAD@{134}: rebase: fast-forward
+[33mc6b3543[m HEAD@{135}: rebase: fast-forward
+[33ma0d62a5[m HEAD@{136}: rebase: fast-forward
+[33m264007a[m HEAD@{137}: rebase: fast-forward
+[33m69682c2[m HEAD@{138}: rebase: fast-forward
+[33ma74f387[m HEAD@{139}: rebase: fast-forward
+[33m5fa7b68[m HEAD@{140}: rebase: fast-forward
+[33mc82e499[m HEAD@{141}: rebase: fast-forward
+[33m9690b7d[m HEAD@{142}: rebase (start): checkout 9690b7df825698f5f1d6d541b2ae87c9bc698f41
+[33m3a971b3[m HEAD@{143}: rebase (finish): returning to refs/heads/squash/release-v1.0.0
+[33m3a971b3[m HEAD@{144}: rebase: fast-forward
+[33m0cfbce1[m HEAD@{145}: rebase: fast-forward
+[33mba0adaf[m HEAD@{146}: rebase: fast-forward
+[33m89c5e26[m HEAD@{147}: rebase: fast-forward
+[33mbacf138[m HEAD@{148}: rebase: fast-forward
+[33mc5919d0[m HEAD@{149}: rebase: fast-forward
+[33m4d6b1cf[m HEAD@{150}: rebase: fast-forward
+[33m2e37621[m HEAD@{151}: rebase: fast-forward
+[33m8ce961a[m HEAD@{152}: rebase: fast-forward
+[33mc6b3543[m HEAD@{153}: rebase: fast-forward
+[33ma0d62a5[m HEAD@{154}: rebase: fast-forward
+[33m264007a[m HEAD@{155}: rebase: fast-forward
+[33m69682c2[m HEAD@{156}: rebase: fast-forward
+[33ma74f387[m HEAD@{157}: rebase: fast-forward
+[33m5fa7b68[m HEAD@{158}: rebase: fast-forward
+[33mc82e499[m HEAD@{159}: rebase: fast-forward
+[33m42f8e7a[m HEAD@{160}: rebase (start): checkout 42f8e7acb9efcfa63c6f87b868286b1eef1a3613
+[33m3a971b3[m HEAD@{161}: rebase (abort): returning to refs/heads/squash/release-v1.0.0
+[33m019acbc[m HEAD@{162}: rebase (start): checkout 019acbcba26dd49a5c6cda86a0781babc9da15b4
+[33m3a971b3[m HEAD@{163}: reset: moving to HEAD@{1}
+[33m3a971b3[m HEAD@{164}: rebase (finish): returning to refs/heads/squash/release-v1.0.0
+[33m3a971b3[m HEAD@{165}: rebase (pick): feat: AI->BE 포맷 수정#69 (#71)
+[33m0cfbce1[m HEAD@{166}: rebase (pick): feat: RAG 문서 존재 시에도 검열 불필요로 판단#63 (#70)
+[33mba0adaf[m HEAD@{167}: rebase (pick): feat: 모델 응답 형식 미준수 (프롬프트 불이행)#66 (#68)
+[33m89c5e26[m HEAD@{168}: rebase (pick): feat: 모델이 잘못된 카테고리로 응답함 (ENUM 불일치)#65 (#67)
+[33mbacf138[m HEAD@{169}: rebase (pick): feat: 검열 결과 파싱 오류: 모델 응답과 카테고리 불일치 현상#62 (#64)
+[33mc5919d0[m HEAD@{170}: rebase (pick): feat: 로그 포맷터 형식 변경#59 (#61)
+[33m4d6b1cf[m HEAD@{171}: rebase (pick): feature: ai/moderation 로깅 양식 수정#57 (#58)
+[33m2e37621[m HEAD@{172}: rebase (pick): feature: api/v1/moderation Body 명세 수정#55 (#56)
+[33m8ce961a[m HEAD@{173}: rebase (pick): feat: FastAPI 요청/응답 및 동작 이력 로깅 기능 개발#44 (#54)
+[33mc6b3543[m HEAD@{174}: rebase (pick): feat: LLM 기반 검열 과정 로깅 기능 개발#43 (#53)
+[33ma0d62a5[m HEAD@{175}: rebase (pick): feat: moderation 응답 형식 수정#51 (#52)
+[33m264007a[m HEAD@{176}: rebase (pick): feat: 검열 결과 전달 로직 개발 #41
+[33m69682c2[m HEAD@{177}: rebase (pick): Update README.md
+[33ma74f387[m HEAD@{178}: rebase (pick): Project Base Architecture 구현 #42
+[33m5fa7b68[m HEAD@{179}: rebase: fast-forward
+[33mc82e499[m HEAD@{180}: rebase: fast-forward
+[33m51c3163[m HEAD@{181}: rebase (start): checkout 51c31634d01417ee54bf82c5b8941b2a7459173c
+[33m95185a5[m HEAD@{182}: checkout: moving from main to squash/release-v1.0.0
+[33m95185a5[m HEAD@{183}: checkout: moving from feature/96 to main
+[33m0fb4c0c[m[33m ([m[1;31morigin/feature/96[m[33m, [m[1;32mfeature/96[m[33m)[m HEAD@{184}: commit: feat: requirements 버전 변경#96
+[33m2c45f99[m HEAD@{185}: commit: feat: requirements 버전 변경#96
+[33m0e7fbac[m HEAD@{186}: reset: moving to HEAD~1
+[33mf4954e2[m HEAD@{187}: commit: feat: requirements 버전 변경#96
+[33m0e7fbac[m HEAD@{188}: checkout: moving from develop to feature/96
+[33m0e7fbac[m HEAD@{189}: pull: Fast-forward
+[33m6499530[m HEAD@{190}: checkout: moving from feature/84 to develop
+[33mc1344e0[m[33m ([m[1;31morigin/feature/84[m[33m, [m[1;32mfeature/84[m[33m)[m HEAD@{191}: commit: feat: 출력 스펙 validate_spec 검사 및 위반시 기타 처리#84
+[33m6499530[m HEAD@{192}: reset: moving to 6499530
+[33m8ed5e67[m HEAD@{193}: commit: feat: 출력 스펙 검증#84
+[33m4765682[m HEAD@{194}: commit: feat: 출력 스펙 검증#84
+[33m6499530[m HEAD@{195}: checkout: moving from develop to feature/84
+[33m6499530[m HEAD@{196}: checkout: moving from feature/84 to develop
+[33md54a65c[m HEAD@{197}: checkout: moving from develop to feature/84
+[33m6499530[m HEAD@{198}: pull: Fast-forward
+[33md54a65c[m HEAD@{199}: checkout: moving from feature/84 to develop
+[33md54a65c[m HEAD@{200}: checkout: moving from develop to feature/84
+[33md54a65c[m HEAD@{201}: checkout: moving from feature/84 to develop
+[33md54a65c[m HEAD@{202}: checkout: moving from feature/88 to feature/84
+[33m03671bd[m[33m ([m[1;31morigin/feature/88[m[33m, [m[1;32mfeature/88[m[33m)[m HEAD@{203}: commit: feat: requirements 업데이트#88
+[33mb171fd2[m HEAD@{204}: commit: feat: requirements 업데이트#88
+[33md54a65c[m HEAD@{205}: checkout: moving from develop to feature/88
+[33md54a65c[m HEAD@{206}: checkout: moving from feature/88 to develop
+[33mcd523d5[m HEAD@{207}: checkout: moving from develop to feature/88
+[33md54a65c[m HEAD@{208}: checkout: moving from feature/88 to develop
+[33mcd523d5[m HEAD@{209}: commit: feat: requirements 업데이트#88
+[33md54a65c[m HEAD@{210}: checkout: moving from develop to feature/88
+[33md54a65c[m HEAD@{211}: checkout: moving from feature/84 to develop
+[33md54a65c[m HEAD@{212}: checkout: moving from develop to feature/84
+[33md54a65c[m HEAD@{213}: pull: Fast-forward
+[33m7e6b8be[m HEAD@{214}: checkout: moving from feature/83 to develop
+[33mdbb39d5[m[33m ([m[1;31morigin/feature/83[m[33m, [m[1;32mfeature/83[m[33m)[m HEAD@{215}: commit: feat: 지침 중복·계층화#83
+[33m7e6b8be[m HEAD@{216}: checkout: moving from develop to feature/83
+[33m7e6b8be[m HEAD@{217}: pull: Fast-forward
+[33me069f85[m HEAD@{218}: pull: Fast-forward
+[33mb535abf[m HEAD@{219}: checkout: moving from feature/81 to develop
+[33m4a3be18[m[33m ([m[1;31morigin/feature/81[m[33m, [m[1;32mfeature/81[m[33m)[m HEAD@{220}: commit: feat: moderation test 수정#81
+[33m70b509f[m HEAD@{221}: commit: feat: moderation test 수정#81
+[33mb535abf[m HEAD@{222}: checkout: moving from develop to feature/81
+[33mb535abf[m HEAD@{223}: checkout: moving from feature/82 to develop
+[33m5309238[m[33m ([m[1;31morigin/feature/82[m[33m, [m[1;32mfeature/82[m[33m)[m HEAD@{224}: commit: feat: 컨텍스트 격리#82
+[33mb535abf[m HEAD@{225}: Branch: renamed refs/heads/feature/77 to refs/heads/feature/82
+[33mb535abf[m HEAD@{227}: checkout: moving from develop to feature/77
+[33mb535abf[m HEAD@{228}: reset: moving to origin/develop
+[33m03b696a[m HEAD@{229}: pull --no-rebase --allow-unrelated-histories: Merge made by the 'ort' strategy.
+[33med838cc[m HEAD@{230}: commit (initial): new vm
