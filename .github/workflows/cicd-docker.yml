@@ -117,6 +117,7 @@ jobs:
           BE_SERVER_PORT=${{ secrets.BE_SERVER_PORT }}
           HF_TOKEN=${{ secrets.HF_TOKEN }}
           OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          SERPER_API_KEY=${{ secrets.SERPER_API_KEY }}
           EENV
 
             sudo chmod 600 /home/cicd/.env
