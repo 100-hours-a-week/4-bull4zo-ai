@@ -11,6 +11,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_fastapi_instrumentator.metrics import latency, requests
 from prometheus_client import Gauge
 from starlette.middleware.base import BaseHTTPMiddleware
+from src.version import __version__ as MODEL_VERSION
 
 INPROGRESS_REQUESTS = Gauge(
     "inprogress_requests",
@@ -26,7 +27,7 @@ def run_fastapi_process(moderation_task_queue: Queue, result_queue: Queue):
     app = FastAPI(
         title="AI Server API",
         description="MOA Project - AI Server (HyperCLOVAX 기반 AI Service)",
-        version="1.0.0"
+        version=MODEL_VERSION
     )
 
     class InProgressMiddleware(BaseHTTPMiddleware):
