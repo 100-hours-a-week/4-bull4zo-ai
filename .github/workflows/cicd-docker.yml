@@ -18,7 +18,7 @@ jobs:
       - name: Extract Version
         id: version
         run: |
-          VERSION=$(grep 'version *= *"v' src/ai/moderation_llm.py | sed -E 's/.*"([^"]+)".*/\1/')
+          VERSION=$(grep '__version__ *= *"v' src/version.py | sed -E 's/.*"([^"]+)".*/\1/')
           echo "Extracted version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
