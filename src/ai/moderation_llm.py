@@ -4,6 +4,7 @@ import requests
 from src.api.dtos.moderation_result_request import ModerationResultRequest
 from src.ai.moderation_utils import get_relevant_context, validate_spec, CATEGORY_MAPPING, CATEGORY_ALIASES, normalize_category
 from src.version import __version__ as MODEL_VERSION
+from src.integrations.delivery import Delivery
 
 def build_moderation_prompt(moderation_request, relevant_context):
     content = moderation_request.content
@@ -127,19 +128,6 @@ def extract_category_and_reason(result):
     found_category_en = CATEGORY_MAPPING.get(found_category_kr, "OTHER")
     return found_category_kr, found_category_en, reason_detail
 
-def send_moderation_callback(moderation_result_request, callback_url, logger, request_id):
-    headers = {"Content-Type": "application/json"}
-    try:
-        logger.info(f"검열 결과 전송 시작", extra={"section": "server", "request_id": request_id})
-        response = requests.post(callback_url, json=moderation_result_request.dict(), headers=headers)
-        if response.status_code == 201:
-            logger.info(f"검열 결과 전송 성공: HTTP {response.status_code}", extra={"section": "server", "request_id": request_id})
-        else:
-            logger.error(f"검열 결과 전송 실패: HTTP {response.status_code}", extra={"section": "server", "request_id": request_id})
-    except requests.exceptions.RequestException as e:
-        error_msg = f"검열 결과 전송 중 네트워크 오류: {str(e)}"
-        logger.error(error_msg, exc_info=True, extra={"section": "server", "request_id": request_id})
-
 def moderation_pipeline(moderation_request, model, tokenizer, device, callback_url, logger):
     content = moderation_request.content
     request_id = str(moderation_request.voteId)
@@ -182,7 +170,7 @@ def moderation_pipeline(moderation_request, model, tokenizer, device, callback_u
             version=version
         )
         logger.info(f"검열 결과: {final_result}, 카테고리={final_reason}, 이유='{final_reason_detail}'", extra={"section": "server", "request_id": request_id, "pred_label": pred_label, "pred_score": pred_score, "model_version": version})
-        send_moderation_callback(moderation_result_request, callback_url, logger, request_id)
+        Delivery.send_moderation_callback(moderation_result_request, callback_url, logger, request_id)
         return moderation_result_request.dict()
     except Exception as e:
         error_msg = f"검열 처리 중 오류 발생: {str(e)}"

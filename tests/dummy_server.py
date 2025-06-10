@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, status
 import uvicorn
 from src.api.dtos.moderation_result_request import ModerationResultRequest
+from src.api.dtos.model_vote_request import ModelVoteRequest
 from src.version import __version__ as MODEL_VERSION
 
 load_dotenv()
@@ -22,6 +23,17 @@ def run_dummy_server_process():
             "message": "SUCCESS",
             "data": {
                 "voteId": moderation_result.voteId,
+                "stored": True
+            }
+        }
+    
+    @app.post("/api/v1/ai/votes", status_code=status.HTTP_201_CREATED)
+    def create_model_vote(vote: ModelVoteRequest):
+        print(vote)
+        return {
+            "message": "SUCCESS",
+            "data": {
+                "wordId": vote.wordId,
                 "stored": True
             }
         }
