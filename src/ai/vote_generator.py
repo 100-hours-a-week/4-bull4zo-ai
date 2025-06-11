@@ -23,38 +23,34 @@ class VoteGenerator:
         full_prompt = f"<s>[INST] <<SYS>>\n{system_prompt}\n<</SYS>>\n{user_prompt} [/INST]"
 
         # 토크나이즈 및 생성
-        input_ids = tokenizer(full_prompt, return_tensors="pt").input_ids
+        inputs = tokenizer(full_prompt, return_tensors="pt")
+        input_ids = inputs["input_ids"]
+        input_length = input_ids.shape[1]
+
         output_ids = model.generate(
-            input_ids,
-            max_new_tokens=20,  # 짧은 출력 강제
-            temperature=0.5,  # 더 일관된 출력
+            **inputs, # Pass the dictionary output from tokenizer
+            max_new_tokens=512,  # 짧은 출력 강제
             do_sample=True,
-            top_k=50,
-            top_p=0.9
-        )
-        # 출력 디코딩 및 후처리
-        gen_tokens = output_ids[0, input_ids.shape[1]:]
-        meme_full = tokenizer.decode(gen_tokens, skip_special_tokens=True).strip()
+            pad_token_id=tokenizer.eos_token_id # Add pad_token_id
+        )        
+        generated_ids = output_ids[0][input_length:]                     # 프롬프트 이후 토큰만 슬라이스
+        meme = tokenizer.decode(generated_ids, skip_special_tokens=True) # 특수 토큰 없이 디코딩
+        meme = meme.strip()                                             # 앞뒤 공백/줄바꿈 제거
 
-        # 랜덤 번호 접두사 제거
-        pattern = re.escape(str(rand_num)) + r'[:.] ?'
-        meme_clean = re.sub(pattern, '', meme_full, count=1).strip()
+        # 혹시 여전히 여러 줄이 나올 때, 마지막 줄만 취하고 싶으면:
+        meme_line = meme.splitlines()[-1]
+        meme_end = re.split(r"[\n#]", meme_line)[0].strip()
 
-        # 첫 번째 문장 추출 및 불필요한 요소 제거
-        meme = meme_clean.split('.')[0].split('!')[0].split('?')[0].strip()
+        print(meme_end)
 
-        # 추가적인 불필요 요소 (해시태그, 번호 등) 제거
-        meme = re.sub(r'#.*$', '', meme).strip()  # 해시태그 제거
-        meme = re.sub(r'^\d+\s*', '', meme).strip()  # 번호 제거
-
-        logger.info(f"VoteGenerator 완료: {meme}")
+        logger.info(f"VoteGenerator 완료: {meme_end}")
 
         now = datetime.now()
         open_at = now.replace(hour=10, minute=0, second=0, microsecond=0).isoformat() # 전송 시작 날짜 기준 10시 0분 0초
         closed_at = (now + timedelta(days=7)).replace(microsecond=0).isoformat() # 7일 후
         
         return {
-            "content": meme.strip(),
+            "content": meme_end.strip(),
             "imageUrl": "",
             "imageName": "",
             "openAt": open_at,
