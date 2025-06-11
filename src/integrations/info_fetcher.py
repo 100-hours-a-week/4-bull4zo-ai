@@ -40,7 +40,7 @@ class InfoFetcher:
                 
                 # organic 결과에서 snippet 추출
                 if 'organic' in first_result and len(first_result['organic']) > 0:
-                    snippets = [item['snippet'] for item in first_result['organic'] if 'snippet' in item][:1] # 상위 1개만 추출
+                    snippets = [item['snippet'] for item in first_result['organic'] if 'snippet' in item][:3] # 상위 3개만 추출
                     return '\n'.join(snippets)
             
             return "검색 결과가 없습니다."
