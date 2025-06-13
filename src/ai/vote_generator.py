@@ -1,11 +1,13 @@
 from src.ai.model_manager import model, tokenizer
 from src.version import __version__ as MODEL_VERSION
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from src.common.logger_config import init_process_logging
 import random
 import re
 
 logger = init_process_logging("ai")
+
+KST = timezone(timedelta(hours=9))
 
 class VoteGenerator:
     def generate(self, word: str, info: str, model, tokenizer) -> dict:
@@ -45,7 +47,7 @@ class VoteGenerator:
 
         logger.info(f"VoteGenerator 완료: {meme_end}")
 
-        now = datetime.now()
+        now = datetime.now(KST)
         open_at = now.replace(hour=10, minute=0, second=0, microsecond=0).isoformat() # 전송 시작 날짜 기준 10시 0분 0초
         closed_at = (now + timedelta(days=7)).replace(microsecond=0).isoformat() # 7일 후
         
