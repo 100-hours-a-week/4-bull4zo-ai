@@ -78,7 +78,7 @@ dataclasses-json==0.6.7
     # via langchain-community
 
 
-decord==0.6.0
+decord==0.5.2
     # via -r requirements.in
 deprecated==1.2.18
     # via
