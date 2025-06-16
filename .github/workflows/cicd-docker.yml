@@ -118,6 +118,7 @@ jobs:
           HF_TOKEN=${{ secrets.HF_TOKEN }}
           OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           SERPER_API_KEY=${{ secrets.SERPER_API_KEY }}
+          GOOGLE_SEARCH_API_KEY=${{ secrets.GOOGLE_SEARCH_API_KEY }}
           EENV
 
             sudo chmod 600 /home/cicd/.env
