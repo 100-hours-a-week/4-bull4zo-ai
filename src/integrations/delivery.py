@@ -18,8 +18,7 @@ class Delivery:
             imageUrl=vote.get("imageUrl", ""),
             imageName=vote.get("imageName", ""),
             openAt=vote.get("openAt", ""),
-            closedAt=vote.get("closedAt", ""),
-            version=vote.get("version", "")
+            closedAt=vote.get("closedAt", "")
         )
         headers = {"Content-Type": "application/json"}
         logger.info(f"모델 투표 결과 전송 시작", extra={"section": "server", "request_id": request_id, "word_id": word_id})

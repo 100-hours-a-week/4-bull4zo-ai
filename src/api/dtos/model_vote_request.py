@@ -7,4 +7,3 @@ class ModelVoteRequest(BaseModel):
     imageName: str = ""
     openAt: str
     closedAt: str
-    version: str
