@@ -56,6 +56,5 @@ class VoteGenerator:
             "imageUrl": "",
             "imageName": "",
             "openAt": open_at,
-            "closedAt": closed_at,
-            "version": MODEL_VERSION
+            "closedAt": closed_at
         }
