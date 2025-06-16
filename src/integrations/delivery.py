@@ -13,7 +13,6 @@ class Delivery:
         backend_url: str
     ) -> Tuple[int, Optional[str], Optional[dict]]:
         payload = ModelVoteRequest(
-            wordId=word_id,
             content=vote.get("content", ""),
             imageUrl=vote.get("imageUrl", ""),
             imageName=vote.get("imageName", ""),
@@ -23,7 +22,9 @@ class Delivery:
         headers = {"Content-Type": "application/json"}
         logger.info(f"모델 투표 결과 전송 시작", extra={"section": "server", "request_id": request_id, "word_id": word_id})
         try:
-            response = requests.post(backend_url, json=payload.dict(), headers=headers)
+            # Pydantic v2 이상 호환: model_dump() 사용
+            payload_dict = payload.model_dump() if hasattr(payload, 'model_dump') else payload.dict()
+            response = requests.post(backend_url, json=payload_dict, headers=headers)
             status_code = response.status_code
             try:
                 body = response.json()
