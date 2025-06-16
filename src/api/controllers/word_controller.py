@@ -22,7 +22,7 @@ def get_word_router(moderation_task_queue, result_queue):
             }),
             extra={"section": "moderation", "request_id": str(word_id)}
         )
-        background_tasks.add_task(run_pipeline, word_id, body.word, moderation_task_queue, result_queue)
+        background_tasks.add_task(run_pipeline, word_id, body.word, moderation_task_queue, result_queue, logger)
         return {"word_id": word_id, "status": "queued"}
 
     return router 

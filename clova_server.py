@@ -22,6 +22,7 @@ from fastapi.exception_handlers import RequestValidationError
 from fastapi.exceptions import RequestValidationError as FastAPIRequestValidationError
 from starlette.requests import Request as StarletteRequest
 from datetime import datetime, timezone
+from src.version import __version__ as MODEL_VERSION
 
 # API 모델 정의
 class ServerStatus(str, Enum):
@@ -60,7 +61,7 @@ class StatusResponse(APIResponse):
 app = FastAPI(
     title="HyperCLOVAX 검열 시스템 API",
     description="HyperCLOVAX 기반 검열 시스템 API",
-    version="1.0.0"
+    version=MODEL_VERSION
 )
 
 # 전역 변수
