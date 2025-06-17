@@ -26,6 +26,7 @@ class VoteGenerator:
 
         # 토크나이즈 및 생성
         inputs = tokenizer(full_prompt, return_tensors="pt")
+        inputs = {k: v.to(model.device) for k, v in inputs.items()}
         input_ids = inputs["input_ids"]
         input_length = input_ids.shape[1]
 
