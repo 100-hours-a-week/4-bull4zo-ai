@@ -33,7 +33,7 @@ def run_dummy_server_process():
         return {
             "message": "SUCCESS",
             "data": {
-                "wordId": vote.wordId,
+                "content": vote.content,
                 "stored": True
             }
         }
