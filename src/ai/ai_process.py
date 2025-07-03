@@ -9,6 +9,7 @@ from langchain_community.document_loaders import Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
+from ai.group_analyzer import GroupAnalyzer
 from src.api.dtos.moderation_request import ModerationRequest
 from src.api.dtos.moderation_result_request import ModerationResultRequest
 import requests
@@ -179,9 +180,13 @@ def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_qu
             if isinstance(task, dict) and "type" in task:
                 task_type = task["type"]
                 data = task["data"]
+
+                # ========== 필터링 ==========
                 if task_type == "moderation":
                     result = moderation_pipeline(data, model, tokenizer, device, callback_url, logger)
                     result_queue.put(result)
+
+                # ========== 투표 생성 ==========
                 elif task_type == "vote":
                     with vote_lock:
                         word_id = data.get("word_id")
@@ -207,6 +212,14 @@ def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_qu
                             backend_url = f"http://{be_server_ip}:{be_server_port}/api/v1/ai/votes"
                             Delivery.send_model_vote(word_id, vote, logger, str(word_id), backend_url=backend_url)
                             result_queue.put({"word_id": word_id, "status": "delivered"})
+
+                # ========== 투표 분석 ==========
+                elif task_type == "analysis":
+                    start_date = data.get("start_date")
+                    end_date = data.get("end_date")
+
+                    result = GroupAnalyzer().generate(start_date, end_date, model, tokenizer, device, logger)
+                    result_queue.put(result)
             else:
                 result = moderation_pipeline(task, model, tokenizer, device, callback_url, logger)
                 result_queue.put(result)
@@ -217,4 +230,3 @@ def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_qu
     
     # 로깅 시스템 종료
     shutdown_logging("ai")
-
