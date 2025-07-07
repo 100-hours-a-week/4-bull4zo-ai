@@ -182,7 +182,7 @@ class GroupAnalyzer:
                     "topKeywords": parsed_input["topKeywords"]
                 },
                 "modelReview": parsed_input["modelReview"],
-                "version": "1.0.0"
+                "version": MODEL_VERSION
             }
 
             logger.info(f"BE 투표 분석 결과 등록 요청 시작")
