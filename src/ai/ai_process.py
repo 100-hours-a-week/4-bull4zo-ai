@@ -9,7 +9,7 @@ from langchain_community.document_loaders import Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
-from ai.group_analyzer import GroupAnalyzer
+from src.ai.group_analyzer import GroupAnalyzer
 from src.api.dtos.moderation_request import ModerationRequest
 from src.api.dtos.moderation_result_request import ModerationResultRequest
 import requests
