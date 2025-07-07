@@ -237,6 +237,8 @@ class GroupAnalyzer:
             except Exception as e:
                 logger.exception(f"API 요청 중 예외 발생: {e}")
 
+        logger.info(f"Analysis 완료.")
+
         return {
             "analysis_results": group_analysis
         }
