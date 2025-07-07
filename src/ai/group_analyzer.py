@@ -62,12 +62,17 @@ class GroupAnalyzer:
             v.id"""
 
         # pandas로 SQL 실행 결과 바로 읽기
-        group_data_df = pd.read_sql(query, con=engine)
-        group_data_df['yes'] = group_data_df['yes'].fillna(0)
-        group_data_df['no'] = group_data_df['no'].fillna(0)
-
-        logger.info("데이터 조회 결과")
-        logger.info(group_data_df)
+        try:
+            group_data_df = pd.read_sql(query, con=engine)
+            group_data_df['yes'] = group_data_df['yes'].fillna(0)
+            group_data_df['no'] = group_data_df['no'].fillna(0)
+            
+            logger.info("데이터 조회 결과")
+            logger.info(group_data_df)
+        except Exception as e:
+            logger.error(f"[Error] Error is occurred: {e}")
+            logger.error(group_data_df)
+            return None
 
         return group_data_df
 
@@ -139,7 +144,11 @@ class GroupAnalyzer:
         logger.info(f"Analysis 시작: start_date[{start_date}] ~ end_date[{end_date}]")
 
         # 그룹 정보 조회
-        group_data_df = self._get_group_data(start_date, end_date)
+        group_data_df = self._get_group_data(start_date, end_date, logger)
+        if group_data_df is None:
+            return {
+                    "analysis_results": None
+            }
 
         group_analysis = []
 
@@ -147,7 +156,7 @@ class GroupAnalyzer:
             logger.info(f"그룹[{group_id}] 투표 및 댓글 데이터 분석 시작")
 
             summary_str = self._summarize_group_data(group_df)
-            analysis = self._analyze_group(summary_str)
+            analysis = self._analyze_group(summary_str, model, tokenizer, device)
             
             analysis = analysis.replace('```json', '')
             analysis = analysis.replace('```', '')
