@@ -14,6 +14,8 @@ COPY . .
 
 RUN mkdir -p /app/logs
 
+ENV PYTHONPATH=/app/src
+
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000

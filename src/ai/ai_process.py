@@ -9,6 +9,7 @@ from langchain_community.document_loaders import Docx2txtLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
+from src.ai.group_analyzer import GroupAnalyzer
 from src.api.dtos.moderation_request import ModerationRequest
 from src.api.dtos.moderation_result_request import ModerationResultRequest
 import requests
@@ -21,6 +22,7 @@ from src.integrations.info_fetcher import InfoFetcher
 from src.ai.vote_generator import VoteGenerator
 from src.integrations.moderation import moderate
 from src.integrations.delivery import Delivery
+import threading
 
 # 로거 초기화
 logger = init_process_logging("ai")
@@ -28,6 +30,7 @@ logger = init_process_logging("ai")
 vector_store = None
 embeddings = None
 text_splitter = None
+vote_lock = threading.Lock()
 
 load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
@@ -177,33 +180,46 @@ def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_qu
             if isinstance(task, dict) and "type" in task:
                 task_type = task["type"]
                 data = task["data"]
+
+                # ========== 필터링 ==========
                 if task_type == "moderation":
                     result = moderation_pipeline(data, model, tokenizer, device, callback_url, logger)
                     result_queue.put(result)
+
+                # ========== 투표 생성 ==========
                 elif task_type == "vote":
-                    word_id = data.get("word_id")
-                    word = data.get("word", "")
-                    info = InfoFetcher.fetch(word)
-                    vote = VoteGenerator().generate(word, info, model, tokenizer)
-                    moderation_request = ModerationRequest(content=vote["content"], voteId=word_id)
-                    mod = moderate(moderation_request, model, tokenizer, device, callback_url, logger)
-                    if mod["result"] == "REJECTED":
-                        # ModerationLog 저장
-                        logger.info(
-                            json.dumps({
-                                "vote_id": word_id,
-                                "content": vote["content"],
-                                "model_response": mod.get("model_response", ""),
-                                "inference_time": mod.get("inference_time", "")
-                            }),
-                            extra={"section": "moderation", "request_id": str(word_id)}
-                        )
-                        result_queue.put({"word_id": word_id, "status": "rejected"})
-                    else:
-                        # 모델(AI) 투표용 엔드포인트
-                        backend_url = f"http://{be_server_ip}:{be_server_port}/api/v1/ai/votes"
-                        Delivery.send_model_vote(word_id, vote, logger, str(word_id), backend_url=backend_url)
-                        result_queue.put({"word_id": word_id, "status": "delivered"})
+                    with vote_lock:
+                        word_id = data.get("word_id")
+                        word = data.get("word", "")
+                        info = InfoFetcher.fetch(word)
+                        vote = VoteGenerator().generate(word, info, model, tokenizer)
+                        moderation_request = ModerationRequest(content=vote["content"], voteId=word_id)
+                        mod = moderate(moderation_request, model, tokenizer, device, callback_url, logger)
+                        if mod["result"] == "REJECTED":
+                            # ModerationLog 저장
+                            logger.info(
+                                json.dumps({
+                                    "vote_id": word_id,
+                                    "content": vote["content"],
+                                    "model_response": mod.get("model_response", ""),
+                                    "inference_time": mod.get("inference_time", "")
+                                }),
+                                extra={"section": "moderation", "request_id": str(word_id)}
+                            )
+                            result_queue.put({"word_id": word_id, "status": "rejected"})
+                        else:
+                            # 모델(AI) 투표용 엔드포인트
+                            backend_url = f"http://{be_server_ip}:{be_server_port}/api/v1/ai/votes"
+                            Delivery.send_model_vote(word_id, vote, logger, str(word_id), backend_url=backend_url)
+                            result_queue.put({"word_id": word_id, "status": "delivered"})
+
+                # ========== 투표 분석 ==========
+                elif task_type == "analysis":
+                    start_date = data.get("start_date")
+                    end_date = data.get("end_date")
+
+                    result = GroupAnalyzer().generate(start_date, end_date, model, tokenizer, device, logger)
+                    result_queue.put(result)
             else:
                 result = moderation_pipeline(task, model, tokenizer, device, callback_url, logger)
                 result_queue.put(result)
@@ -214,4 +230,3 @@ def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_qu
     
     # 로깅 시스템 종료
     shutdown_logging("ai")
-
