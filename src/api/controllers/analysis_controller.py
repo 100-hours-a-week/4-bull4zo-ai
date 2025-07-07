@@ -1,11 +1,10 @@
 import json
 from fastapi import APIRouter, BackgroundTasks, status, Request
 import pytz
-from api.dtos.analysis_request import AnalysisRequest
-from services.analysis_pipeline import run_analysis_pipeline
+from src.services.analysis_pipeline import run_analysis_pipeline
 from datetime import datetime, timedelta
 
-def get_word_router(moderation_task_queue, result_queue):
+def get_analyzer_router(moderation_task_queue, result_queue):
     router = APIRouter(prefix="/api/v1", tags=["Analysis"])
 
     @router.post("/analysis")
