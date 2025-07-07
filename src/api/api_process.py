@@ -2,6 +2,7 @@ from multiprocessing import Queue
 from multiprocessing.synchronize import Event
 from fastapi import FastAPI, Request
 import uvicorn
+from src.api.controllers.analysis_controller import get_analyzer_router
 from src.api.controllers.moderation_controller import get_router
 from src.api.controllers.status_controller import status_router
 from src.api.controllers.word_controller import get_word_router
@@ -48,6 +49,7 @@ def run_fastapi_process(moderation_task_queue: Queue, result_queue: Queue):
     app.include_router(get_router(moderation_task_queue, result_queue, logger))
     app.include_router(status_router)
     app.include_router(get_word_router(moderation_task_queue, result_queue))
+    app.include_router(get_analyzer_router(moderation_task_queue, result_queue))
     
     # Prometheus Instrumentator 설정 (latency, requests만 추가)
     instrumentator = (
