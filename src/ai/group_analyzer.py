@@ -167,10 +167,8 @@ class GroupAnalyzer:
             try:
                 parsed_input = json.loads(analysis)
             except Exception as e:
-                logger.error("[ERROR] JSON 파싱 실패: {e}, 원본: {analysis}")
-                return {
-                    "analysis_results": None
-                }
+                logger.error(f"[ERROR] JSON 파싱 실패: {e}, 원본: {analysis}")
+                continue
 
             # key 이름 변환
             parsed_input = {
