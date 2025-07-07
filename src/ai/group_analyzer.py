@@ -1,8 +1,7 @@
 import json
 import os
-
 import requests
-from ai.moderation_llm import parse_moderation_response
+from src.ai.moderation_llm import parse_moderation_response
 from src.ai.model_manager import model, tokenizer
 from src.version import __version__ as MODEL_VERSION
 from src.common.logger_config import init_process_logging
@@ -156,7 +155,13 @@ class GroupAnalyzer:
 
             group_analysis.append(analysis)
 
-            parsed_input = json.loads(analysis)
+            try:
+                parsed_input = json.loads(analysis)
+            except Exception as e:
+                logger.error("[ERROR] JSON 파싱 실패: {e}, 원본: {analysis}")
+                return {
+                    "analysis_results": None
+                }
 
             # key 이름 변환
             parsed_input = {
