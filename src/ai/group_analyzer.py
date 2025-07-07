@@ -1,5 +1,7 @@
 import json
 import os
+
+import requests
 from ai.moderation_llm import parse_moderation_response
 from src.ai.model_manager import model, tokenizer
 from src.version import __version__ as MODEL_VERSION
@@ -13,6 +15,8 @@ DB_PASS = str(os.getenv("DB_PASS"))
 DB_HOST = str(os.getenv("DB_HOST"))
 DB_PORT = int(os.getenv("DB_PORT"))
 DB_NAME = str(os.getenv("DB_NAME"))
+BE_SERVER_IP = os.getenv("BE_SERVER_IP")
+BE_SERVER_PORT = os.getenv("BE_SERVER_PORT")
 
 class GroupAnalyzer:
     def _get_group_data(self, start_date, end_date, logger):
@@ -52,7 +56,7 @@ class GroupAnalyzer:
             g.name != '공개'
             AND g.name NOT LIKE '%%테스트%%'
             AND v.vote_status IN ('OPEN', 'CLOSED')
-            AND v.created_at BETWEEN '{start_date} 00:00:00' AND '{end_date} 00:00:00'
+            AND v.created_at BETWEEN '{start_date}' AND '{end_date}'
         GROUP BY
             g.id,
             g.name,
@@ -82,13 +86,9 @@ class GroupAnalyzer:
     def _analyze_group(self, group, model, tokenizer, device):
         prompt = """
 ######################  SYSTEM  ######################
-You are a voting‑data analyst.
-Return ONE plain‑text report only.
-Output MUST be placed strictly between [ANSWER] and [/ANSWER].
-Do NOT repeat or mention the prompt, template, or any instructions.
-
-**DATA는 Pandas의 DataFrame을 문자열로 변환한 것이고, Comment는 Comma Separated Field임을 참고할 것.**
-**개요와 총평은 반드시 서술형 구어체 만을 사용하여 작성할 것.(example. ~~입니다. ~~할 것입니다. 등)**
+당신은 투표 데이터 분석가입니다.
+반드시 [FORMAT(JSON)] 형식으로 [OUTPUT] 이후에 한 번만 출력해야 합니다.
+출력 형식 이외의 지시문, Prompt, Template, 그리고 어떠한 다른 Instructions도 출력하지 마세요.
 ######################################################
 
 #######################  USER  #######################
@@ -96,99 +96,135 @@ Do NOT repeat or mention the prompt, template, or any instructions.
 """ + f"{group}" + """
 [/DATA]
 
-Fill every {placeholder} in the template below with real analysis results.
-If information is missing, write '없음' (no quotes).
-Write **at least 3 lines** in section 3.
-Keep all other words and line‑breaks exactly as‑is.
+[FORMAT(JSON)]
+{
+    "group_id": {group_id}
+    "group_name": {group_name}
+    "vote_summary": {vote_summary},
+    "comment_summary": {comment_summary},
+    "emotion": {[emotion, emotion, emotion]},
+    "top_keywords": {[keyword, keyword, keyword]},
+    "modelReview": {[review_line, review_line, review_line]}
+}
 
-[FORMAT]
-[ANSWER]
-분석 보고서
-
-1. 개요
-- 그룹명: {group_name}
-- 투표 내용 요약: {vote_summary}
-- 댓글 내용 요약: {comment_summary}
-
-2. 그룹 전체 분위기
-- 감성: {sentiment_overall}
-- 주요 키워드: {kw1}, {kw2}, {kw3}
-
-3. 총평
-- {review_line1}
-- {review_line2}
-- {review_line3}
-[/ANSWER]
+[INFORMATION]
+- {vote_summary}는 입력 데이터의 vote들을 분석하여 요약 정리한 내용을 출력할 것.
+- {comment_summary}는 입력 데이터의 comment들을 분석하여 요약 정리한 내용을 출력할 것.
+- {[emotion, emotion, ...]}은 투표 및 댓글을 기반으로 감정이 어떤지, 대표 감정 3가지만 출력할 것.
+- {[keyword, keyword, keyword]}는 투표 및 댓글을 기반으로 대표 키워드 3가지만 출력할 것.
+- {[review_line, review_line, review_line]}는 당신이 투표들과 댓글들을 상세하게 분석한 총평을 최소 50자 이상으로 3가지 출력할 것.
 ######################################################
+
+[OUTPUT]
 """
 
         response = self._generate_analysis(prompt, model, tokenizer, device)
         result = parse_moderation_response(response)
         return result
 
+    def _summarize_group_data(self, df):
+        group_id = df["group_id"].iloc[0]
+        group_name = df["group_name"].iloc[0]
+        vote_summary = ", ".join([str(v) for v in df["vote"].unique() if str(v).strip() not in ["None", "nan", ""]])
+        comment_summary = ", ".join([str(c) for c in df["comment"].unique() if c and c != "None"])
+        if not comment_summary:
+            comment_summary = "없음"
+        return {
+            "group_id": group_id,
+            "group_name": group_name,
+            "vote_summary": vote_summary,
+            "comment_summary": comment_summary
+        }
+
     def generate(self, start_date: str, end_date: str, model, tokenizer, device, logger) -> dict:
         logger.info(f"Analysis 시작: start_date[{start_date}] ~ end_date[{end_date}]")
 
         # 그룹 정보 조회
         group_data_df = self._get_group_data(start_date, end_date)
-        groups = [data.copy() for _, data in group_data_df.groupby('group_id')]
-        
-        # 그룹별 분석
 
-        logger.info(f"그룹별 투표 및 댓글 데이터 분석 시작")
         group_analysis = []
-        for group in groups:
-            analysis = self._analyze_group(group, model, tokenizer, device)
-            group_analysis.append(analysis)
 
-            logger.info(f"분석 완료, 결과 후처리 진행 중...")
-            analysis = analysis.replace('[ANSWER]', '')
-            analysis = analysis.replace('[/ANSWER]', '')
+        for group_id, group_df in group_data_df.groupby("group_id"):
+            logger.info(f"그룹[{group_id}] 투표 및 댓글 데이터 분석 시작")
+
+            summary_str = self._summarize_group_data(group_df)
+            analysis = self._analyze_group(summary_str)
+            
+            analysis = analysis.replace('```json', '')
             analysis = analysis.replace('```', '')
-            analysis = analysis.replace('# End of File', '')
             analysis = analysis.strip()
 
-            print(analysis)
-            print()
-            logger.info(f"Group Analysis 완료: {analysis}")
+            group_analysis.append(analysis)
 
-        logger.info(f"그룹별 투표 및 댓글 데이터 분석 완료")
+            parsed_input = json.loads(analysis)
 
-        # 그룹별 분석 결과 데이터 구조화 -> to JSON
-        logger.info(f"분석 데이터 후처리(to JSON) 및 BE 전송 시작")
-        for input_str in group_analysis:
-            logger.info(f"분석 데이터 후처리 작업 중...")
-            section_pattern = re.compile(r"(\d+)\.\s*([^\n]+)\n((?:\s+-[^\n]*\n?)+)", re.MULTILINE)
-            matches = section_pattern.findall(input_str)
+            # key 이름 변환
+            parsed_input = {
+                "groupId": parsed_input["group_id"],
+                "groupName": parsed_input["group_name"],
+                "voteSummary": parsed_input["vote_summary"],
+                "commentSummary": parsed_input["comment_summary"],
+                "emotion": parsed_input["emotion"],
+                "topKeywords": parsed_input["top_keywords"],
+                "modelReview": parsed_input["modelReview"]
+            }
 
-            result = {}
-            for num, section, body in matches:
-                section_name = section.strip()
-                
-                if section_name == "총평":
-                    items = [
-                        re.sub(r'^\s*-\s*', '', line).strip()
-                        for line in body.strip().split('\n') if line.strip()
-                    ]
-                    result[section_name] = items
+            # request body 생성
+            request_body = {
+                "groupId": parsed_input["groupId"],
+                "weekStartAt": start_date,
+                "overview": {
+                    "voteSummary": parsed_input["voteSummary"],
+                    "commentSummary": parsed_input["commentSummary"]
+                },
+                "sentiment": {
+                    "emotion": parsed_input["emotion"],
+                    "topKeywords": parsed_input["topKeywords"]
+                },
+                "modelReview": parsed_input["modelReview"],
+                "version": "1.0.0"
+            }
+
+            logger.info(f"BE 투표 분석 결과 등록 요청 시작")
+
+            url = f"http://{BE_SERVER_IP}:{BE_SERVER_PORT}/api/v1/ai/groups/analysis"
+            headers = {"Content-Type": "application/json"}
+
+            try:
+                response = requests.post(url, headers=headers, data=json.dumps(request_body))
+                code = response.status_code
+
+                logger.info(f"Status code: {response.status_code}")
+                logger.info(f"Response body: {response.text}")
+
+                if code == 201:
+                    logger.info("201 Created: SUCCESS - 분석 데이터 등록 완료")
+                elif code == 400:
+                    body = response.json()
+                    message = body.get("message", "UNKNOWN")
+                    if message == "INVALID_TIME":
+                        logger.warning("400 Bad Request: INVALID_TIME - weekStartAt 유효성 오류")
+                    elif message == "INVALID_ERROR":
+                        logger.warning("400 Bad Request: INVALID_ERROR - 필수값 누락 또는 형식 오류")
+                    else:
+                        logger.warning(f"400 Bad Request: 기타 오류 ({message})")
+                elif code == 404:
+                    logger.error("404 Not Found: GROUP_NOT_FOUND - 해당 그룹 없음")
+                elif code == 409:
+                    logger.warning("409 Conflict: DUPLICATE_ANALYSIS - 중복 데이터")
+                elif code == 500:
+                    body = response.json()
+                    message = body.get("message", "UNKNOWN")
+                    if message == "MONGO_SAVE_FAILED":
+                        logger.error("500 Internal Server Error: MONGO_SAVE_FAILED - DB 저장 오류")
+                    else:
+                        logger.error(f"500 Internal Server Error: {message} - 서버 내부 오류")
                 else:
-                    section_dict = {}
-                    for line in body.strip().split('\n'):
-                        line = line.strip()
-                        if not line.startswith('-'):
-                            continue
-                        content = line[1:].strip()
-                        if ':' in content:
-                            title, value = content.split(':', 1)
-                            section_dict[title.strip()] = value.strip()
-                    result[section_name] = section_dict
+                    logger.error(f"{code} Unexpected response: {response.text}")
+            
+            except Exception as e:
+                logger.exception(f"API 요청 중 예외 발생: {e}")
 
-            logger.info(json.dumps(result, ensure_ascii=False, indent=2))
-        
-            # TODO: BE에 분석 리포트 등록 요청 보내기
-            # logger.info(f"분석 데이터 BE 전송 중...")
-            # NOTE: 전송 Delay가 필요할 수도 있음. -> 분석 루프에서 바로 후처리 하고 송신하는 방법도 고려.
-        
         return {
             "analysis_results": group_analysis
         }
