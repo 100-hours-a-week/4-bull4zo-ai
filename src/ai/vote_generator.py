@@ -49,8 +49,12 @@ class VoteGenerator:
         logger.info(f"VoteGenerator 완료: {meme_end}")
 
         now = datetime.now(KST)
-        open_at = now.replace(hour=10, minute=0, second=0, microsecond=0, tzinfo=None).isoformat(timespec='seconds') # 전송 시작 날짜 기준 10시 0분 0초
-        closed_at = (now + timedelta(days=7)).replace(microsecond=0, tzinfo=None).isoformat(timespec='seconds') # 7일 후
+        # 0~23시 중 랜덤한 시각 선택
+        random_hour = random.randint(0, 23)
+        random_minute = random.randint(0, 59)
+        random_second = random.randint(0, 59)
+        open_at = now.replace(hour=random_hour, minute=random_minute, second=random_second, microsecond=0, tzinfo=None).isoformat(timespec='seconds')
+        closed_at = (now.replace(hour=random_hour, minute=random_minute, second=random_second, microsecond=0, tzinfo=None) + timedelta(days=7)).isoformat(timespec='seconds')
         
         return {
             "content": meme_end.strip(),
