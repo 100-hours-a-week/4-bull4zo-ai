@@ -1,6 +1,7 @@
 from multiprocessing import Queue
 from multiprocessing.synchronize import Event
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from src.api.controllers.analysis_controller import get_analyzer_router
 from src.api.controllers.moderation_controller import get_router
@@ -41,6 +42,15 @@ def run_fastapi_process(moderation_task_queue: Queue, result_queue: Queue):
             return response
 
     app.add_middleware(InProgressMiddleware)
+
+    # CORS 설정
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # 정적 배포 후, * 대신 도메인 주소 입력
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     # 로거를 FastAPI 앱 상태에 저장하여 컨트롤러에서 접근 가능하게 함
     app.state.logger = logger
