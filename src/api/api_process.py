@@ -2,6 +2,7 @@ from multiprocessing import Queue
 from multiprocessing.synchronize import Event
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from elasticapm.contrib.starlette import make_apm_client, ElasticAPM
 import uvicorn
 from src.api.controllers.analysis_controller import get_analyzer_router
 from src.api.controllers.moderation_controller import get_router
@@ -31,6 +32,16 @@ def run_fastapi_process(moderation_task_queue: Queue, result_queue: Queue):
         description="MOA Project - AI Server (HyperCLOVAX 기반 AI Service)",
         version=MODEL_VERSION
     )
+
+    # Elastic APM 설정
+    apm_config = {
+        'SERVICE_NAME': 'moa-ai',
+        'SERVER_URL': 'http://52.79.56.248:8200',
+        'ENVIRONMENT': 'prod',
+    }
+    
+    apm = make_apm_client(apm_config)
+    app.add_middleware(ElasticAPM, client=apm)
 
     class InProgressMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request: Request, call_next):
