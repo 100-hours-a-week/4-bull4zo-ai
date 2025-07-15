@@ -1,5 +1,3 @@
-from src.ai.model_manager import model, tokenizer
-from src.version import __version__ as MODEL_VERSION
 from datetime import datetime, timedelta, timezone
 from src.common.logger_config import init_process_logging
 import random
