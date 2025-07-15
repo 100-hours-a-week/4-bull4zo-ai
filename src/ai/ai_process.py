@@ -39,7 +39,7 @@ environment = os.getenv("ENVIRONMENT").lower()
 be_server_ip = os.getenv("BE_SERVER_IP")
 be_server_port = os.getenv("BE_SERVER_PORT")
 
-callback_url = f"http://{be_server_ip}:{be_server_port}/api/v1/ai/votes/moderation/callback"
+callback_url = f"{be_server_ip}/api/v1/ai/votes/moderation/callback"
 
 if not hf_token:
     logger.error("HF_TOKEN is not set. Please check your .env file.", 
