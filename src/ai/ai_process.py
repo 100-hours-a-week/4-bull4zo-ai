@@ -134,17 +134,20 @@ def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_qu
         model = AutoModelForCausalLM.from_pretrained(
             model_name, 
             trust_remote_code=True,
+            revision="v0.1.0",
             token=hf_token
         ).to(device=device)
         
-        processor = AutoProcessor.from_pretrained(
+        preprocessor = AutoProcessor.from_pretrained(
             model_name, 
             trust_remote_code=True,
+            revision="v0.1.0",
             token=hf_token
         )
         
         tokenizer = AutoTokenizer.from_pretrained(
             model_name,
+            revision="v0.1.0",
             token=hf_token
         )
     except Exception as e:
