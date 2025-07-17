@@ -2,14 +2,7 @@ import json
 import os
 import requests
 from src.ai.moderation_llm import parse_moderation_response
-<<<<<<< HEAD
 from src.version import __version__ as MODEL_VERSION
-=======
-from src.ai.model_manager import model, tokenizer
-from src.version import __version__ as MODEL_VERSION
-from src.common.logger_config import init_process_logging
-import re
->>>>>>> b2013e7 (release: v3.0.0)
 import pandas as pd
 from sqlalchemy import create_engine
 

@@ -16,15 +16,7 @@ class InfoFetcher:
         url = "https://google.serper.dev/search"
 
         payload = json.dumps([{
-<<<<<<< HEAD
-<<<<<<< HEAD
             "q": word + " 뜻" + " -site:pinterest.com -site:behance.net -site:youtube.com -site:reddit.com",
-=======
-            "q": word + " 유머",
->>>>>>> b2013e7 (release: v3.0.0)
-=======
-            "q": word + " 뜻" + " -site:pinterest.com -site:behance.net -site:youtube.com -site:reddit.com",
->>>>>>> f187ad0 (release: v3.1.0 (#176))
             "gl": "kr",
             "hl": "ko",
             #"tbs": "qdr:m"
