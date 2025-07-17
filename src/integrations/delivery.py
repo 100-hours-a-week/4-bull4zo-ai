@@ -24,7 +24,8 @@ class Delivery:
         try:
             # Pydantic v2 이상 호환: model_dump() 사용
             payload_dict = payload.model_dump() if hasattr(payload, 'model_dump') else payload.dict()
-            response = requests.post(backend_url, json=payload_dict, headers=headers)
+            url = f"{backend_url}/api/v1/ai/votes"
+            response = requests.post(url, json=payload_dict, headers=headers)
             status_code = response.status_code
             try:
                 body = response.json()
