@@ -212,7 +212,7 @@ def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_qu
                             result_queue.put({"word_id": word_id, "status": "rejected"})
                         else:
                             # 모델(AI) 투표용 엔드포인트
-                            backend_url = f"http://{be_server_ip}:{be_server_port}/api/v1/ai/votes"
+                            backend_url = f"{be_server_ip}/api/v1/ai/votes"
                             Delivery.send_model_vote(word_id, vote, logger, str(word_id), backend_url=backend_url)
                             result_queue.put({"word_id": word_id, "status": "delivered"})
 
