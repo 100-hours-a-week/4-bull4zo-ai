@@ -10,7 +10,6 @@ aiohttp==3.11.18
     # via langchain-community
 aiosignal==1.3.2
     # via aiohttp
-
 annotated-types==0.7.0
     # via
     #   -r requirements.in
@@ -30,7 +29,6 @@ attrs==25.3.0
     #   aiohttp
     #   jsonschema
     #   referencing
-
 av==14.3.0
     # via -r requirements.in
 backoff==2.2.1
@@ -41,13 +39,12 @@ build==1.2.2.post1
     # via
     #   chromadb
     #   pip-tools
-
-    # via chromadb
 cachetools==5.5.2
     # via google-auth
 certifi==2025.4.26
     # via
     #   -r requirements.in
+    #   elastic-apm
     #   httpcore
     #   httpx
     #   kubernetes
@@ -56,28 +53,18 @@ charset-normalizer==3.4.1
     # via
     #   -r requirements.in
     #   requests
-
-chroma-hnswlib==0.7.3
-    # via chromadb
-
 chromadb==1.0.9
     # via -r requirements.in
 click==8.1.8
     # via
     #   -r requirements.in
-
     #   pip-tools
-
-
     #   typer
     #   uvicorn
 coloredlogs==15.0.1
     # via onnxruntime
-
 dataclasses-json==0.6.7
     # via langchain-community
-
-
 decord==0.5.2
     # via -r requirements.in
 deprecated==1.2.18
@@ -93,7 +80,11 @@ docx2txt==0.8
     # via -r requirements.in
 durationpy==0.10
     # via kubernetes
+ecs-logging==2.2.0
+    # via elastic-apm
 einops==0.8.1
+    # via -r requirements.in
+elastic-apm==6.23.0
     # via -r requirements.in
 exceptiongroup==1.2.2
     # via -r requirements.in
@@ -145,9 +136,6 @@ httpx==0.28.1
     #   openai
 httpx-sse==0.4.0
     # via langchain-community
-
-    #   langsmith
-    #   openai
 huggingface-hub==0.30.2
     # via
     #   -r requirements.in
@@ -163,7 +151,6 @@ idna==3.10
     #   httpx
     #   requests
     #   yarl
-
 importlib-metadata==8.6.1
     # via opentelemetry-api
 importlib-resources==6.5.2
@@ -209,14 +196,6 @@ langsmith==0.3.42
     #   langchain
     #   langchain-community
     #   langchain-core
-kubernetes==32.0.1
-    # via chromadb
-langchain-core==0.3.60
-    # via langchain-openai
-langchain-openai==0.3.16
-    # via -r requirements.in
-langsmith==0.3.42
-    # via langchain-core
 markdown-it-py==3.0.0
     # via rich
 markupsafe==3.0.2
@@ -227,7 +206,6 @@ marshmallow==3.26.1
     # via
     #   -r requirements.in
     #   dataclasses-json
-
 mdurl==0.1.2
     # via markdown-it-py
 mmh3==5.1.0
@@ -236,14 +214,12 @@ mpmath==1.3.0
     # via
     #   -r requirements.in
     #   sympy
-
 multidict==6.4.4
     # via
     #   aiohttp
     #   yarl
 mypy-extensions==1.1.0
     # via typing-inspect
-
 networkx==3.2.1
     # via
     #   -r requirements.in
@@ -251,17 +227,12 @@ networkx==3.2.1
 numpy==1.26.4
     # via
     #   -r requirements.in
-
     #   chromadb
     #   decord
     #   langchain-community
-
-    #   chroma-hnswlib
-    #   chromadb
-    #   decord
-
     #   onnxruntime
     #   opencv-python
+    #   pandas
     #   torchvision
     #   transformers
 nvidia-cublas-cu12==12.6.4.1
@@ -388,25 +359,29 @@ packaging==24.0
     #   huggingface-hub
     #   langchain-core
     #   langsmith
-
     #   marshmallow
-
     #   onnxruntime
     #   opentelemetry-instrumentation
     #   transformers
+pandas==2.2.3
+    # via -r requirements.in
 pillow==11.2.1
     # via torchvision
-
 pip-tools==7.4.1
     # via -r requirements.in
 posthog==4.0.1
     # via chromadb
+prometheus-client==0.22.0
+    # via
+    #   -r requirements.in
+    #   prometheus-fastapi-instrumentator
+prometheus-fastapi-instrumentator==7.1.0
+    # via -r requirements.in
 propcache==0.3.1
     # via
     #   -r requirements.in
     #   aiohttp
     #   yarl
-
 protobuf==5.29.4
     # via
     #   googleapis-common-protos
@@ -423,65 +398,60 @@ pydantic==2.11.3
     #   -r requirements.in
     #   chromadb
     #   fastapi
-
     #   langchain
     #   langchain-core
     #   langsmith
     #   openai
     #   pydantic-settings
-
 pydantic-core==2.33.1
     # via
     #   -r requirements.in
     #   pydantic
-
 pydantic-settings==2.9.1
     # via
     #   -r requirements.in
     #   langchain-community
-
 pygments==2.19.1
     # via rich
+pymysql==1.1.1
+    # via -r requirements.in
 pypika==0.48.9
     # via chromadb
 pyproject-hooks==1.2.0
-
     # via
     #   build
     #   pip-tools
-
 python-dateutil==2.9.0.post0
     # via
     #   kubernetes
+    #   pandas
     #   posthog
 python-dotenv==1.1.0
     # via
     #   -r requirements.in
-
     #   pydantic-settings
-
     #   uvicorn
+pytz==2025.2
+    # via
+    #   -r requirements.in
+    #   pandas
 pyyaml==6.0.2
     # via
     #   -r requirements.in
     #   chromadb
     #   huggingface-hub
     #   kubernetes
-
     #   langchain
     #   langchain-community
-
     #   langchain-core
     #   timm
     #   transformers
     #   uvicorn
-
 referencing==0.36.2
     # via
     #   -r requirements.in
     #   jsonschema
     #   jsonschema-specifications
-
 regex==2024.11.6
     # via
     #   -r requirements.in
@@ -490,12 +460,10 @@ regex==2024.11.6
 requests==2.32.3
     # via
     #   -r requirements.in
-
     #   huggingface-hub
     #   kubernetes
     #   langchain
     #   langchain-community
-
     #   langsmith
     #   posthog
     #   requests-oauthlib
@@ -507,7 +475,6 @@ requests-oauthlib==2.0.0
 requests-toolbelt==1.0.0
     # via langsmith
 rich==14.0.0
-
     # via
     #   chromadb
     #   typer
@@ -516,7 +483,6 @@ rpds-py==0.25.1
     #   -r requirements.in
     #   jsonschema
     #   referencing
-
 rsa==4.9.1
     # via google-auth
 safetensors==0.5.3
@@ -536,16 +502,15 @@ sniffio==1.3.1
     #   -r requirements.in
     #   anyio
     #   openai
-
 sqlalchemy==2.0.41
     # via
     #   langchain
     #   langchain-community
-
 starlette==0.45.3
     # via
     #   -r requirements.in
     #   fastapi
+    #   prometheus-fastapi-instrumentator
 sympy==1.14.0
     # via
     #   -r requirements.in
@@ -554,9 +519,7 @@ sympy==1.14.0
 tenacity==9.1.2
     # via
     #   chromadb
-
     #   langchain-community
-
     #   langchain-core
 tiktoken==0.9.0
     # via langchain-openai
@@ -601,7 +564,6 @@ typing-extensions==4.13.2
     #   opentelemetry-sdk
     #   pydantic
     #   pydantic-core
-
     #   referencing
     #   sqlalchemy
     #   torch
@@ -612,17 +574,17 @@ typing-inspect==0.9.0
     # via
     #   -r requirements.in
     #   dataclasses-json
-
 typing-inspection==0.4.0
     # via
     #   -r requirements.in
     #   pydantic
-
     #   pydantic-settings
-
+tzdata==2025.2
+    # via pandas
 urllib3==2.4.0
     # via
     #   -r requirements.in
+    #   elastic-apm
     #   kubernetes
     #   requests
 uvicorn[standard]==0.34.2
@@ -637,30 +599,26 @@ websocket-client==1.8.0
     # via kubernetes
 websockets==15.0.1
     # via uvicorn
-
 wheel==0.45.1
     # via
     #   -r requirements.in
     #   pip-tools
-
 wrapt==1.17.2
     # via
     #   deprecated
+    #   elastic-apm
     #   opentelemetry-instrumentation
-
 yarl==1.20.0
     # via
     #   -r requirements.in
     #   aiohttp
-
 zipp==3.21.0
     # via importlib-metadata
 zstandard==0.23.0
     # via langsmith
-prometheus-fastapi-instrumentator==7.1.0
 
-prometheus-client==0.22.0
 # The following packages are considered to be unsafe in a requirements file:
+# pip
 # setuptools
 
 pytz==2025.2

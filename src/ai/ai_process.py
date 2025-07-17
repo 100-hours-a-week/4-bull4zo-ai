@@ -39,7 +39,7 @@ environment = os.getenv("ENVIRONMENT").lower()
 be_server_ip = os.getenv("BE_SERVER_IP")
 be_server_port = os.getenv("BE_SERVER_PORT")
 
-callback_url = f"http://{be_server_ip}:{be_server_port}/api/v1/ai/votes/moderation/callback"
+callback_url = f"{be_server_ip}/api/v1/ai/votes/moderation/callback"
 
 if not hf_token:
     logger.error("HF_TOKEN is not set. Please check your .env file.", 
@@ -134,17 +134,20 @@ def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_qu
         model = AutoModelForCausalLM.from_pretrained(
             model_name, 
             trust_remote_code=True,
+            revision="v0.1.0",
             token=hf_token
         ).to(device=device)
         
-        processor = AutoProcessor.from_pretrained(
+        preprocessor = AutoProcessor.from_pretrained(
             model_name, 
             trust_remote_code=True,
+            revision="v0.1.0",
             token=hf_token
         )
         
         tokenizer = AutoTokenizer.from_pretrained(
             model_name,
+            revision="v0.1.0",
             token=hf_token
         )
     except Exception as e:
