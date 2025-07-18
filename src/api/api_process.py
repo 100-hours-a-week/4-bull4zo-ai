@@ -2,10 +2,7 @@ from multiprocessing import Queue
 from multiprocessing.synchronize import Event
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-<<<<<<< HEAD
 from elasticapm.contrib.starlette import make_apm_client, ElasticAPM
-=======
->>>>>>> f187ad0 (release: v3.1.0 (#176))
 import uvicorn
 from src.api.controllers.analysis_controller import get_analyzer_router
 from src.api.controllers.moderation_controller import get_router

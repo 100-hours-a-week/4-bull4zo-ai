@@ -39,7 +39,7 @@ environment = os.getenv("ENVIRONMENT").lower()
 be_server_ip = os.getenv("BE_SERVER_IP")
 be_server_port = os.getenv("BE_SERVER_PORT")
 
-callback_url = f"{be_server_ip}/api/v1/ai/votes/moderation/callback"
+moderation_callback_url = f"{be_server_ip}/api/v1/ai/votes/moderation/callback"
 
 if not hf_token:
     logger.error("HF_TOKEN is not set. Please check your .env file.", 
@@ -186,7 +186,7 @@ def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_qu
 
                 # ========== 필터링 ==========
                 if task_type == "moderation":
-                    result = moderation_pipeline(data, model, tokenizer, device, callback_url, logger)
+                    result = moderation_pipeline(data, model, tokenizer, device, moderation_callback_url, logger)
                     result_queue.put(result)
 
                 # ========== 투표 생성 ==========
@@ -197,7 +197,7 @@ def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_qu
                         info = InfoFetcher.fetch(word)
                         vote = VoteGenerator().generate(word, info, model, tokenizer)
                         moderation_request = ModerationRequest(content=vote["content"], voteId=word_id)
-                        mod = moderate(moderation_request, model, tokenizer, device, callback_url, logger)
+                        mod = moderate(moderation_request, model, tokenizer, device, moderation_callback_url, logger)
                         if mod["result"] == "REJECTED":
                             # ModerationLog 저장
                             logger.info(
@@ -212,8 +212,8 @@ def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_qu
                             result_queue.put({"word_id": word_id, "status": "rejected"})
                         else:
                             # 모델(AI) 투표용 엔드포인트
-                            backend_url = f"http://{be_server_ip}:{be_server_port}/api/v1/ai/votes"
-                            Delivery.send_model_vote(word_id, vote, logger, str(word_id), backend_url=backend_url)
+                            vote_delivery_url = f"{be_server_ip}/api/v1/ai/votes"
+                            Delivery.send_model_vote(word_id, vote, logger, str(word_id), backend_url=vote_delivery_url)
                             result_queue.put({"word_id": word_id, "status": "delivered"})
 
                 # ========== 투표 분석 ==========
@@ -224,7 +224,7 @@ def run_model_process(stop_event: Event, moderation_task_queue: Queue, result_qu
                     result = GroupAnalyzer().generate(start_date, end_date, model, tokenizer, device, logger)
                     result_queue.put(result)
             else:
-                result = moderation_pipeline(task, model, tokenizer, device, callback_url, logger)
+                result = moderation_pipeline(task, model, tokenizer, device, moderation_callback_url, logger)
                 result_queue.put(result)
         time.sleep(0.01)
     
