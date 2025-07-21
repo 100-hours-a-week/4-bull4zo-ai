@@ -20,7 +20,9 @@ def build_moderation_prompt(moderation_request, relevant_context):
                      "- '[사유]'는 해당 카테고리로 분류한 이유를 구체적으로 작성하세요.\n"
                      "- 적절한 내용일 경우 반드시 '검열 불필요: 적절한 표현입니다.'로만 답변하세요. (예: 검열 불필요: 적절한 표현입니다.)\n"
                      "- 절대 '검열 필요:', '부적절', '적절', '카테고리:' 등 다른 형식이나 영어로 시작하지 마세요.\n"
-                     "- 반드시 위에 제시된 한글 카테고리(정확히 일치)로만 시작하세요.\n\n"
+                     "- 반드시 위에 제시된 한글 카테고리(정확히 일치)로만 시작하세요.\n"
+                     "- 음란성/선정성 판단 시 매우 신중하게 접근하세요. 단순한 외모 칭찬이나 친근한 표현은 허용하세요.\n"
+                     "- 명백한 성적 표현이나 노골적인 음란한 내용이 아니면 '검열 불필요'로 판단하세요.\n\n"
                      "아래 예시를 참고하여 반드시 동일한 형식으로 답변하세요.\n"
                      "예시1)\n입력: 오늘 날씨가 좋네요.\n출력: 검열 불필요: 적절한 표현입니다.\n"
                      "예시2)\n입력: 씨발새끼\n출력: 욕설/비방: 욕설이 포함되어 있어 부적절합니다.\n"
@@ -29,6 +31,9 @@ def build_moderation_prompt(moderation_request, relevant_context):
                      "예시5)\n입력: 무료로 돈 벌기! 지금 바로 클릭하세요!\n출력: 스팸/광고: 스팸/광고성 문구가 포함되어 있어 부적절합니다.\n"
                      "예시6)\n입력: 저는 홍길동입니다\n출력: 사칭/사기/개인정보 노출: 사칭 또는 개인정보 노출이 감지되어 부적절합니다.\n"
                      "예시7)\n입력: 아아아아아아아아\n출력: 기타: 기타 부적절한 내용이 감지되었습니다.\n"
+                     "예시8)\n입력: 예쁘네요, 귀여워요\n출력: 검열 불필요: 적절한 표현입니다.\n"
+                     "예시9)\n입력: 몸매가 좋아 보여요\n출력: 검열 불필요: 적절한 표현입니다.\n"
+                     "예시10)\n입력: 섹시하다\n출력: 검열 불필요: 적절한 표현입니다.\n"
                  )
     })
     if relevant_context:
@@ -92,7 +97,7 @@ def extract_category_and_reason(result):
     reason_detail = ""
     if ": " in result:
         category_part, reason_detail = result.split(": ", 1)
-        if any(keyword in reason_detail for keyword in ["성적으로 암시", "성적", "음란", "선정"]):
+        if any(keyword in reason_detail for keyword in ["성적으로 암시", "성적", "음란", "선정"]) and any(strong_keyword in reason_detail for strong_keyword in ["노골적", "명백한", "직접적", "노출", "관계"]):
             found_category_kr = "음란성/선정성"
         else:
             category_part_norm = category_part.replace(" ", "")
