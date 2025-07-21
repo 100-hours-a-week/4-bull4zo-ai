@@ -40,9 +40,6 @@ def run_fastapi_process(moderation_task_queue: Queue, result_queue: Queue):
         'ENVIRONMENT': 'prod',
     }
     
-    apm = make_apm_client(apm_config)
-    app.add_middleware(ElasticAPM, client=apm)
-
     class InProgressMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request: Request, call_next):
             INPROGRESS_REQUESTS.inc()
@@ -52,9 +49,10 @@ def run_fastapi_process(moderation_task_queue: Queue, result_queue: Queue):
                 INPROGRESS_REQUESTS.dec()
             return response
 
+    # InProgress 미들웨어는 가장 먼저 (마지막에 등록)
     app.add_middleware(InProgressMiddleware)
 
-    # CORS 설정
+    # CORS 설정 (두 번째)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],  # 정적 배포 후, * 대신 도메인 주소 입력
@@ -62,6 +60,10 @@ def run_fastapi_process(moderation_task_queue: Queue, result_queue: Queue):
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Elastic APM은 가장 마지막에 (먼저 등록)
+    apm = make_apm_client(apm_config)
+    app.add_middleware(ElasticAPM, client=apm)
 
     # 로거를 FastAPI 앱 상태에 저장하여 컨트롤러에서 접근 가능하게 함
     app.state.logger = logger
